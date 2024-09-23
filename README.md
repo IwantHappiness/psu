@@ -12,7 +12,7 @@ insert passwords and output them to the console, but I plan to improve him.
 ## Quickstart
 ```
 psu add <SERVICE> <LOGIN> <PASSWORD> // add your password to the database
-psu print-all // prints all passwords and from the id
+psu print -a // prints all passwords and from the id
 psu prind <ID> // if you want to output one specific password
 ```
 The functionality is being finalized and some things may be changed
