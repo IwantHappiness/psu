@@ -27,7 +27,7 @@ pub fn only_linux() -> Connection {
 #[cfg(target_os = "windows")]
 pub fn only_windows() -> Connection {
     use std::path::PathBuf;
-    
+
     let home_dir = std::env::var("USERPROFILE").expect("Failed to get HOME directory");
 
     let mut path = PathBuf::from(home_dir);
