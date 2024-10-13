@@ -7,16 +7,22 @@ const DB: &str = "password.db";
 
 #[cfg(target_os = "linux")]
 pub fn only_linux() -> Connection {
+    use std::{fs, path::Path};
+
     let home_dir = match std::env::var("HOME") {
         Ok(path) => path,
         Err(e) => panic!("Could not find HOME directory: {e}"),
     };
 
-    let path = format!("{home_dir}/Documents/{DB}");
-    match Connection::open(path) {
-        Ok(e) => e,
-        Err(e) => panic!("Error: {e}"),
+    let path = format!("{home_dir}/Documents");
+    let is_dir_exists = Path::new(&path).try_exists().unwrap();
+
+    if is_dir_exists == false {
+        fs::create_dir(&path).expect("Failed create dir Documents");
     }
+
+    let path = format!("{home_dir}/Documents/{DB}");
+    Connection::open(path).expect("Failed to open the database")
 }
 
 #[cfg(target_os = "windows")]
