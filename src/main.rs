@@ -1,15 +1,15 @@
 use colored::Colorize;
-use std::path::PathBuf;
-use rusqlite::Connection;
-use directories::UserDirs;
 use psu::{create_table, insert, print, remove, Cli, Commands};
+use rusqlite::Connection;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 const DB: &str = "password.db";
 
 #[cfg(target_os = "linux")]
 pub fn only_linux() -> Connection {
-    use std::{fs, path::Path};
-
     let home_dir = match std::env::var("HOME") {
         Ok(path) => path,
         Err(e) => panic!("Could not find HOME directory: {e}"),
@@ -28,6 +28,7 @@ pub fn only_linux() -> Connection {
 
 #[cfg(target_os = "windows")]
 pub fn only_windows() -> Connection {
+    use directories::UserDirs;
 
     if let Some(doc) = UserDirs::new() {
         let doc_path = doc.document_dir().unwrap();
@@ -37,7 +38,6 @@ pub fn only_windows() -> Connection {
     } else {
         panic!("Failed to open the database");
     }
-
 }
 
 fn main() {
