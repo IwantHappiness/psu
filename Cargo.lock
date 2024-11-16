@@ -276,7 +276,7 @@ dependencies = [
 
 [[package]]
 name = "psu"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "clap",
  "colored",
