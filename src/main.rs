@@ -1,34 +1,31 @@
-use colored::Colorize;
 use psu::{create_table, insert, print, remove, Cli, Commands};
 use rusqlite::Connection;
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
 
 const DB: &str = "password.db";
 
 #[cfg(target_os = "linux")]
 pub fn only_linux() -> Connection {
+    use std::{fs, path::Path};
+
     let home_dir = match std::env::var("HOME") {
         Ok(path) => path,
-        Err(e) => panic!("Could not find HOME directory: {e}"),
+        Err(e) => panic!("HOME : {e}"),
     };
 
     let path = format!("{home_dir}/Documents");
-    let is_dir_exists = Path::new(&path).try_exists().unwrap();
 
-    if is_dir_exists == false {
+    if !Path::new(&path).try_exists().unwrap() {
         fs::create_dir(&path).expect("Failed create dir Documents");
     }
 
-    let path = format!("{home_dir}/Documents/{DB}");
+    let path = format!("{}/{DB}", path);
     Connection::open(path).expect("Failed to open the database")
 }
 
 #[cfg(target_os = "windows")]
 pub fn only_windows() -> Connection {
     use directories::UserDirs;
+    use std::fs::PathBuf;
 
     if let Some(doc) = UserDirs::new() {
         let doc_path = doc.document_dir().unwrap();
@@ -56,15 +53,7 @@ fn main() {
             service,
             login,
             password,
-        } => {
-            insert(&conn, &service, &login, &password).unwrap();
-            println!(
-                "Add: {} {} {} .",
-                service.to_string().green(),
-                login.to_string().green(),
-                password.to_string().green()
-            );
-        }
+        } => insert(&conn, &service, &login, &password).unwrap(),
 
         Commands::Print { all, id } => print(&conn, all, id),
 

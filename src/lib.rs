@@ -68,6 +68,14 @@ pub fn insert(file: &Connection, service: &str, login: &str, password: &str) -> 
         "INSERT INTO password (service, login, password) VALUES (?1, ?2, ?3)",
         params![service, login, password],
     )?;
+
+    println!(
+        "Add: {} {} {} .",
+        service.to_string().green(),
+        login.to_string().green(),
+        password.to_string().green()
+    );
+
     Ok(())
 }
 
