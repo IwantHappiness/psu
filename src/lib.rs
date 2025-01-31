@@ -113,7 +113,12 @@ pub fn search_by_id(conn: &Connection, id: u16) -> Option<Password> {
 		.filter_map(|f| f.ok())
 		.collect();
 
-	Some(users.remove(0))
+	if !users.is_empty() {
+		Some(users.remove(0))
+	} else {
+		eprintln!("Password not found");
+		process::exit(1)
+	}
 }
 
 pub fn search(conn: &Connection) -> Option<Vec<Password>> {
