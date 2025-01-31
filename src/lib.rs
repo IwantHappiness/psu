@@ -86,9 +86,9 @@ pub fn insert(
 
 	println!(
 		"Add: {} {} {} .",
-		service.to_string().green(),
-		login.to_string().green(),
-		password.to_string().green()
+		service.green(),
+		login.green(),
+		password.green()
 	);
 
 	Ok(())
@@ -148,7 +148,7 @@ pub fn print(conn: &Connection, all: bool, id: Option<u16>) {
 					None => {
 						eprintln!(
 							"{}",
-							"The password could not be found".to_string().red()
+							"The password could not be found".red()
 						);
 						process::exit(1);
 					}
@@ -164,10 +164,7 @@ pub fn print(conn: &Connection, all: bool, id: Option<u16>) {
 			let users = match search(conn) {
 				Some(p) => p,
 				None => {
-					eprintln!(
-						"{}",
-						"There are no passwords for output".to_string().red()
-					);
+					eprintln!("{}", "There are no passwords for output".red());
 					process::exit(1);
 				}
 			};
