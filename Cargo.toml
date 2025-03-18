@@ -10,7 +10,7 @@ description = "Password storage utility."
 lto = true
 
 [dependencies]
-clap = { version = "4.5.18", features = ["derive"] }
-colored = "2.1.0"
-directories = "5.0.1"
-rusqlite = { version = "0.32.1", features = ["bundled"] }
+clap = { version = "4.5.32", features = ["derive"] }
+colored = "3.0.0"
+directories = "6.0.0"
+rusqlite = { version = "0.34", features = ["bundled"] }

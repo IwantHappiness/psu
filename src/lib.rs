@@ -20,20 +20,21 @@ impl Password {
             params![self.service, self.login, self.password, self.id],
         )
         .unwrap();
+
         println!(
             "Old password: {} {} {} {}",
             old_password.id.to_string().red(),
-            old_password.service.to_string().red(),
-            old_password.login.to_string().red(),
-            old_password.password.to_string().red()
+            old_password.login.red(),
+            old_password.service.red(),
+            old_password.password.red()
         );
 
         println!(
             "New password: {} {} {} {}",
             self.id.to_string().green(),
-            self.service.to_string().green(),
-            self.login.to_string().green(),
-            self.password.to_string().green()
+            self.service.green(),
+            self.login.green(),
+            self.password.green()
         );
     }
 }
@@ -87,8 +88,6 @@ pub fn search_by_id(conn: &Connection, id: u16) -> Option<Password> {
     if !users.is_empty() {
         Some(users.remove(0))
     } else {
-        // eprintln!("Password not found");
-        // process::exit(1)
         None
     }
 }
@@ -164,9 +163,9 @@ pub fn remove(conn: &Connection, id: Option<u16>, all: bool) {
                             println!(
                                 "Remove: {} {} {} {}",
                                 e.id.to_string().red(),
-                                e.service.to_string().red(),
-                                e.login.to_string().red(),
-                                e.password.to_string().red()
+                                e.service.red(),
+                                e.login.red(),
+                                e.password.red()
                             );
                         }
 
