@@ -37,6 +37,7 @@ enum InputMode {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Data {
 	pub login: String,
 	pub password: String,
@@ -102,7 +103,7 @@ impl App {
 
 		// Check file is empty
 		if fs::metadata(PASSWORD_FILE).map(|f| f.len() == 0).unwrap_or(true) {
-			wtr.write_record(["login", "password", "service"])?;
+			wtr.write_record(["Login", "Password", "Service"])?;
 		}
 
 		wtr.write_record(self.data.ref_array())?;
@@ -260,6 +261,7 @@ impl App {
 						KeyCode::Enter => self.print()?,
 						KeyCode::Backspace => self.delete_char(),
 						KeyCode::Esc => self.input_mode = InputMode::Normal,
+						// Add char to fields
 						KeyCode::Char(to_insert) => self.enter_char(to_insert),
 						// Switch fields
 						KeyCode::Down | KeyCode::Tab => match self.data_mode {
