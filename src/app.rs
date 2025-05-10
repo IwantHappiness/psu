@@ -328,7 +328,7 @@ impl App {
 					_ => Style::default(),
 				},
 			})
-			.block(Block::bordered().title("Login"));
+			.block(Block::bordered().title("Login or Email"));
 		let password = Paragraph::new(self.data.password.as_str())
 			.style(match self.input_mode {
 				InputMode::Normal => Style::default(),
@@ -349,10 +349,10 @@ impl App {
 			.block(Block::bordered().title("Service"));
 
 		// Render fileds
-		frame.render_widget(help_message, help_message_area);
 		frame.render_widget(login, login_area);
 		frame.render_widget(password, password_area);
 		frame.render_widget(service, service_area);
+		frame.render_widget(help_message, help_message_area);
 
 		// Cursor handling for input fields
 		match self.data_mode {
