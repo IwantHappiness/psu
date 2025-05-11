@@ -109,30 +109,17 @@ impl App {
 		wtr.write_record(self.data.ref_array())?;
 		wtr.flush()?;
 
-		self.data.reset_data();
-		self.reset_cursor();
-
 		Ok(())
 	}
 
 	fn enter_char(&mut self, ch: char) {
+		let index = self.byte_index();
 		match self.data_mode {
-			DataMode::Login => {
-				let index = self.byte_index();
-				self.data.login.insert(index, ch);
-				self.move_cursor_right();
-			}
-			DataMode::Password => {
-				let index = self.byte_index();
-				self.data.password.insert(index, ch);
-				self.move_cursor_right();
-			}
-			DataMode::Service => {
-				let index = self.byte_index();
-				self.data.service.insert(index, ch);
-				self.move_cursor_right();
-			}
+			DataMode::Login => self.data.login.insert(index, ch),
+			DataMode::Password => self.data.password.insert(index, ch),
+			DataMode::Service => self.data.service.insert(index, ch),
 		}
+		self.move_cursor_right();
 	}
 
 	fn delete_char(&mut self) {
@@ -144,7 +131,6 @@ impl App {
 					let before_char_to_delete = self.data.login.chars().take(from_left_to_current_index);
 					let after_char_to_delete = self.data.login.chars().skip(current_index);
 					self.data.login = before_char_to_delete.chain(after_char_to_delete).collect();
-					self.move_cursor_left();
 				}
 			}
 			DataMode::Password => {
@@ -154,7 +140,6 @@ impl App {
 					let before_char_to_delete = self.data.password.chars().take(from_left_to_current_index);
 					let after_char_to_delete = self.data.password.chars().skip(current_index);
 					self.data.password = before_char_to_delete.chain(after_char_to_delete).collect();
-					self.move_cursor_left();
 				}
 			}
 			DataMode::Service => {
@@ -164,10 +149,10 @@ impl App {
 					let before_char_to_delete = self.data.service.chars().take(from_left_to_current_index);
 					let after_char_to_delete = self.data.service.chars().skip(current_index);
 					self.data.service = before_char_to_delete.chain(after_char_to_delete).collect();
-					self.move_cursor_left();
 				}
 			}
 		}
+		self.move_cursor_left();
 	}
 
 	fn byte_index(&self) -> usize {
@@ -255,10 +240,13 @@ impl App {
 						KeyCode::Char('e') => self.input_mode = InputMode::Editing,
 						_ => {}
 					},
-
 					InputMode::Editing if key.kind == KeyEventKind::Press => match key.code {
 						// Print password to PASSWORD_FILE
-						KeyCode::Enter => self.print()?,
+						KeyCode::Enter => {
+							self.print()?;
+							self.data.reset_data();
+							self.reset_cursor();
+						}
 						KeyCode::Backspace => self.delete_char(),
 						KeyCode::Esc => self.input_mode = InputMode::Normal,
 						// Add char to fields
@@ -293,7 +281,6 @@ impl App {
 			Constraint::Length(1),
 		]);
 		let [login_area, password_area, service_area, help_message_area] = vertical.areas(frame.area());
-
 		let (msg, style) = match self.input_mode {
 			InputMode::Normal => (
 				vec![
@@ -324,7 +311,7 @@ impl App {
 			.style(match self.input_mode {
 				InputMode::Normal => Style::default(),
 				InputMode::Editing => match self.data_mode {
-					DataMode::Login => Style::default().fg(Color::Yellow),
+					DataMode::Login => Style::default().fg(Color::White),
 					_ => Style::default(),
 				},
 			})
@@ -333,7 +320,7 @@ impl App {
 			.style(match self.input_mode {
 				InputMode::Normal => Style::default(),
 				InputMode::Editing => match self.data_mode {
-					DataMode::Password => Style::default().fg(Color::Yellow),
+					DataMode::Password => Style::default().fg(Color::Blue),
 					_ => Style::default(),
 				},
 			})
@@ -342,7 +329,7 @@ impl App {
 			.style(match self.input_mode {
 				InputMode::Normal => Style::default(),
 				InputMode::Editing => match self.data_mode {
-					DataMode::Service => Style::default().fg(Color::Yellow),
+					DataMode::Service => Style::default().fg(Color::Red),
 					_ => Style::default(),
 				},
 			})
@@ -354,31 +341,20 @@ impl App {
 		frame.render_widget(service, service_area);
 		frame.render_widget(help_message, help_message_area);
 
-		// Cursor handling for input fields
-		match self.data_mode {
-			DataMode::Login => {
-				if let InputMode::Editing = self.input_mode {
-					frame.set_cursor_position(Position::new(
-						login_area.x + self.character_index_login as u16 + 1,
-						login_area.y + 1,
-					))
-				}
-			}
-			DataMode::Password => {
-				if let InputMode::Editing = self.input_mode {
-					frame.set_cursor_position(Position::new(
-						password_area.x + self.character_index_password as u16 + 1,
-						password_area.y + 1,
-					))
-				}
-			}
-			DataMode::Service => {
-				if let InputMode::Editing = self.input_mode {
-					frame.set_cursor_position(Position::new(
-						service_area.x + self.character_index_service as u16 + 1,
-						service_area.y + 1,
-					))
-				}
+		if let InputMode::Editing = self.input_mode {
+			match self.data_mode {
+				DataMode::Login => frame.set_cursor_position(Position::new(
+					login_area.x + self.character_index_login as u16 + 1,
+					login_area.y + 1,
+				)),
+				DataMode::Password => frame.set_cursor_position(Position::new(
+					password_area.x + self.character_index_password as u16 + 1,
+					password_area.y + 1,
+				)),
+				DataMode::Service => frame.set_cursor_position(Position::new(
+					service_area.x + self.character_index_service as u16 + 1,
+					service_area.y + 1,
+				)),
 			}
 		}
 	}
