@@ -2,7 +2,6 @@ use anyhow::{Context, Error, Result};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
-use toml;
 
 const CONFIG: &str = "config.toml";
 
@@ -15,7 +14,7 @@ impl Config {
 	}
 
 	pub fn generate_conf(self) -> Result<()> {
-		let dir = self.get_app_data_dir().context("Failed to obtain config directory")?;
+		let dir = get_app_data_dir().context("Failed to obtain config directory")?;
 		let conf = self.parse_config().context("Failed to parse configuration")?;
 
 		fs::create_dir_all(&dir).context("Failed create config dirs")?;
@@ -26,9 +25,9 @@ impl Config {
 	fn parse_config(self) -> Result<String, Error> {
 		Ok(toml::to_string(&self)?)
 	}
+}
 
-	fn get_app_data_dir(&self) -> Option<PathBuf> {
-		let project_dirs = ProjectDirs::from("com", "", "psu")?;
-		Some(project_dirs.data_local_dir().to_path_buf())
-	}
+fn get_app_data_dir() -> Option<PathBuf> {
+	let project_dirs = ProjectDirs::from("com", "", "psu")?;
+	Some(project_dirs.data_local_dir().to_path_buf())
 }
