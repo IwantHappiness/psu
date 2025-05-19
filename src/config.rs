@@ -6,11 +6,22 @@ use std::{fs, path::PathBuf};
 const CONFIG: &str = "config.toml";
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct Config {}
+pub struct Config {
+	fields: Fields,
+}
+
+#[derive(Deserialize, Default, Serialize, Debug)]
+struct Fields {
+	input: String,
+	login: String,
+	servise: String,
+}
 
 impl Config {
 	pub fn new() -> Self {
-		Self {}
+		Self {
+			fields: Fields::default(),
+		}
 	}
 
 	pub fn generate_conf(self) -> Result<()> {
