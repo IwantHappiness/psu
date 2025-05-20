@@ -25,8 +25,8 @@ impl Config {
 	}
 
 	pub fn generate_conf(self) -> Result<()> {
-		let dir = get_app_data_dir().context("Failed to obtain config directory")?;
-		let conf = self.parse_config().context("Failed to parse configuration")?;
+		let dir = get_app_data_dir().context("Failed to obtain config directory.")?;
+		let conf = self.parse_config().context("Failed to parse configuration.")?;
 
 		fs::create_dir_all(&dir).context("Failed create config dirs")?;
 		fs::write(dir.join(CONFIG), conf).context("Failed write config.")?;
@@ -40,5 +40,5 @@ impl Config {
 
 fn get_app_data_dir() -> Option<PathBuf> {
 	let project_dirs = ProjectDirs::from("com", "", "psu")?;
-	Some(project_dirs.data_local_dir().to_path_buf())
+	Some(directories::ProjectDirs::config_dir(&project_dirs).to_path_buf())
 }
