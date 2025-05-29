@@ -1,26 +1,26 @@
 use crate::app::{App, CurrentScreen, InputMode};
 use ratatui::{
 	Frame,
-	layout::{Constraint, Layout, /*Margin,*/ Rect},
+	layout::{Constraint, Layout, Margin, Rect},
 	style::{Color, Modifier, Style, Stylize},
 	text::{Line, Text},
-	widgets::{Block, Cell, HighlightSpacing, Paragraph, Row, Table},
+	widgets::{Block, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
 };
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
-	let vertical = Layout::vertical([
-		Constraint::Length(3),
-		Constraint::Length(3),
-		Constraint::Length(3),
-		Constraint::Length(1),
-	]);
-	let [login_area, password_area, service_area, help_message_area] = vertical.areas(frame.area());
-
 	if app.current_screen == CurrentScreen::Table {
 		let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
 		let rects = vertical.split(frame.area());
 		render_table(app, frame, rects[0]);
+		render_scrollbar(app, frame, rects[0]);
 	} else {
+		let vertical = Layout::vertical([
+			Constraint::Length(3),
+			Constraint::Length(3),
+			Constraint::Length(3),
+			Constraint::Length(1),
+		]);
+		let [login_area, password_area, service_area, help_message_area] = vertical.areas(frame.area());
 		// Render fileds
 		render_input(app, frame, (login_area, password_area, service_area));
 		render_help_message(app, frame, help_message_area);
@@ -72,19 +72,19 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	frame.render_stateful_widget(table, area, &mut app.state);
 }
 
-// fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
-// 	frame.render_stateful_widget(
-// 		Scrollbar::default()
-// 			.orientation(ScrollbarOrientation::VerticalRight)
-// 			.begin_symbol(None)
-// 			.end_symbol(None),
-// 		area.inner(Margin {
-// 			vertical: 1,
-// 			horizontal: 1,
-// 		}),
-// 		&mut app.scroll_state,
-// 	);
-// }
+fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
+	frame.render_stateful_widget(
+		Scrollbar::default()
+			.orientation(ScrollbarOrientation::VerticalRight)
+			.begin_symbol(None)
+			.end_symbol(None),
+		area.inner(Margin {
+			vertical: 1,
+			horizontal: 1,
+		}),
+		&mut app.scroll_state,
+	);
+}
 
 fn render_input(app: &App, frame: &mut Frame, area: (Rect, Rect, Rect)) {
 	let login = Paragraph::new(app.input.login())
@@ -172,7 +172,7 @@ fn render_help_message(app: &App, frame: &mut Frame, area: Rect) {
 				.add_modifier(Modifier::ITALIC)
 				.add_modifier(Modifier::RAPID_BLINK),
 		),
-		CurrentScreen::Table => todo!(),
+		CurrentScreen::Table => (vec![], Style::default()),
 	};
 
 	let text = Text::from(Line::from(msg)).patch_style(style);
