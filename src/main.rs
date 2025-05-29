@@ -108,8 +108,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
 					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
-					KeyCode::Char('h') | KeyCode::Right => app.nex_column(),
-					KeyCode::Char('l') | KeyCode::Left => app.previous_column(),
+					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
+					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
 					_ => {}
 				},
 			}
