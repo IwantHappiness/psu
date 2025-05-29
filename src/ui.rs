@@ -1,13 +1,13 @@
-use crate::app::{App, CurrentScreen, DataMode};
+use crate::app::{App, CurrentScreen, InputMode};
 use ratatui::{
 	Frame,
-	layout::{Constraint, Layout, Rect},
+	layout::{Constraint, Layout, /*Margin,*/ Rect},
 	style::{Color, Modifier, Style, Stylize},
 	text::{Line, Text},
-	widgets::{Block, Paragraph},
+	widgets::{Block, Cell, HighlightSpacing, Paragraph, Row, Table},
 };
 
-pub fn ui(frame: &mut Frame, app: &App) {
+pub fn ui(frame: &mut Frame, app: &mut App) {
 	let vertical = Layout::vertical([
 		Constraint::Length(3),
 		Constraint::Length(3),
@@ -16,36 +16,92 @@ pub fn ui(frame: &mut Frame, app: &App) {
 	]);
 	let [login_area, password_area, service_area, help_message_area] = vertical.areas(frame.area());
 
-	// Render fileds
-	render_input(app, frame, (login_area, password_area, service_area));
-	render_help_message(app, frame, help_message_area);
+	if app.current_screen == CurrentScreen::Table {
+		let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+		let rects = vertical.split(frame.area());
+		render_table(app, frame, rects[0]);
+	} else {
+		// Render fileds
+		render_input(app, frame, (login_area, password_area, service_area));
+		render_help_message(app, frame, help_message_area);
+	}
 }
 
+fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
+	let header_style = Style::default().fg(Color::White).bg(Color::Black);
+	let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::White);
+	let selected_col_style = Style::default().fg(Color::Red);
+	let selected_cell_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::White);
+	let header = ["Login", "Password", "Service"]
+		.into_iter()
+		.map(Cell::from)
+		.collect::<Row>()
+		.style(header_style)
+		.height(1);
+
+	let rows = app.items.iter().enumerate().map(|(i, data)| {
+		let color = match i % 2 {
+			0 => app.colors.normal_row_color,
+			_ => app.colors.alt_row_color,
+		};
+		let item = data.ref_array();
+		item.into_iter()
+			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
+			.collect::<Row>()
+			.style(Style::new().fg(Color::White).bg(color))
+			.height(3)
+	});
+
+	let bar = " █ ";
+	let table = Table::new(
+		rows,
+		[
+			// + 1 is for padding.
+			Constraint::Min(app.longest_item_lens.0 + 1),
+			Constraint::Min(app.longest_item_lens.1 + 1),
+			Constraint::Min(app.longest_item_lens.2),
+		],
+	)
+	.header(header)
+	.row_highlight_style(selected_row_style)
+	.column_highlight_style(selected_col_style)
+	.cell_highlight_style(selected_cell_style)
+	.highlight_symbol(Text::from(vec!["".into(), bar.into(), "".into()]))
+	.bg(Color::Reset)
+	.highlight_spacing(HighlightSpacing::Always);
+	frame.render_stateful_widget(table, area, &mut app.state);
+}
+
+// fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
+// 	frame.render_stateful_widget(
+// 		Scrollbar::default()
+// 			.orientation(ScrollbarOrientation::VerticalRight)
+// 			.begin_symbol(None)
+// 			.end_symbol(None),
+// 		area.inner(Margin {
+// 			vertical: 1,
+// 			horizontal: 1,
+// 		}),
+// 		&mut app.scroll_state,
+// 	);
+// }
+
 fn render_input(app: &App, frame: &mut Frame, area: (Rect, Rect, Rect)) {
-	let login = Paragraph::new(app.data.login.value())
+	let login = Paragraph::new(app.input.login())
 		.style(match app.current_screen {
-			CurrentScreen::Editing => match app.data_mode {
-				DataMode::Login => Style::default().fg(Color::White),
-				_ => Style::default(),
-			},
+			CurrentScreen::Editing if app.input_mode == InputMode::Login => Style::default().fg(Color::White),
 			_ => Style::default(),
 		})
 		.block(Block::bordered().title("Login or Email"));
-	let password = Paragraph::new(app.data.password.value())
+	let password = Paragraph::new(app.input.password())
 		.style(match app.current_screen {
-			CurrentScreen::Editing => match app.data_mode {
-				DataMode::Password => Style::default().fg(Color::Blue),
-				_ => Style::default(),
-			},
+			CurrentScreen::Editing if app.input_mode == InputMode::Password => Style::default().fg(Color::Blue),
 			_ => Style::default(),
 		})
 		.block(Block::bordered().title("Password"));
-	let service = Paragraph::new(app.data.service.value())
+	let service = Paragraph::new(app.input.service())
 		.style(match app.current_screen {
-			CurrentScreen::Editing => match app.data_mode {
-				DataMode::Service => Style::default().fg(Color::Red),
-				_ => Style::default(),
-			},
+			CurrentScreen::Editing if app.input_mode == InputMode::Service => Style::default().fg(Color::Red),
 			_ => Style::default(),
 		})
 		.block(Block::bordered().title("Service"));
@@ -54,28 +110,28 @@ fn render_input(app: &App, frame: &mut Frame, area: (Rect, Rect, Rect)) {
 	frame.render_widget(password, area.1);
 	frame.render_widget(service, area.2);
 
-	let width = match app.data_mode {
-		DataMode::Login => area.0.width.max(3) - 3,
-		DataMode::Password => area.1.width.max(3) - 3,
-		DataMode::Service => area.2.width.max(3) - 3,
+	let width = match app.input_mode {
+		InputMode::Login => area.0.width.max(3) - 3,
+		InputMode::Password => area.1.width.max(3) - 3,
+		InputMode::Service => area.2.width.max(3) - 3,
 	};
 
-	let scroll = match app.data_mode {
-		DataMode::Login => app.data.login.visual_scroll(width as usize),
-		DataMode::Password => app.data.password.visual_scroll(width as usize),
-		DataMode::Service => app.data.service.visual_scroll(width as usize),
+	let scroll = match app.input_mode {
+		InputMode::Login => app.input.login.visual_scroll(width as usize),
+		InputMode::Password => app.input.password.visual_scroll(width as usize),
+		InputMode::Service => app.input.service.visual_scroll(width as usize),
 	};
 
 	if app.current_screen == CurrentScreen::Editing {
-		let x = match app.data_mode {
-			DataMode::Login => app.data.login.visual_cursor().max(scroll) - scroll + 1,
-			DataMode::Password => app.data.password.visual_cursor().max(scroll) - scroll + 1,
-			DataMode::Service => app.data.service.visual_cursor().max(scroll) - scroll + 1,
+		let x = match app.input_mode {
+			InputMode::Login => app.input.login.visual_cursor().max(scroll) - scroll + 1,
+			InputMode::Password => app.input.password.visual_cursor().max(scroll) - scroll + 1,
+			InputMode::Service => app.input.service.visual_cursor().max(scroll) - scroll + 1,
 		};
-		match app.data_mode {
-			DataMode::Login => frame.set_cursor_position((area.0.x + x as u16, area.0.y + 1)),
-			DataMode::Password => frame.set_cursor_position((area.1.x + x as u16, area.1.y + 1)),
-			DataMode::Service => frame.set_cursor_position((area.2.x + x as u16, area.2.y + 1)),
+		match app.input_mode {
+			InputMode::Login => frame.set_cursor_position((area.0.x + x as u16, area.0.y + 1)),
+			InputMode::Password => frame.set_cursor_position((area.1.x + x as u16, area.1.y + 1)),
+			InputMode::Service => frame.set_cursor_position((area.2.x + x as u16, area.2.y + 1)),
 		};
 	}
 }
@@ -97,7 +153,7 @@ fn render_help_message(app: &App, frame: &mut Frame, area: Rect) {
 				"Press ".into(),
 				"y".bold(),
 				" to exit psu, ".into(),
-				"q".bold(),
+				"q or n".bold(),
 				" to cancel exit.".into(),
 			],
 			Style::default().add_modifier(Modifier::RAPID_BLINK),
@@ -116,6 +172,7 @@ fn render_help_message(app: &App, frame: &mut Frame, area: Rect) {
 				.add_modifier(Modifier::ITALIC)
 				.add_modifier(Modifier::RAPID_BLINK),
 		),
+		CurrentScreen::Table => todo!(),
 	};
 
 	let text = Text::from(Line::from(msg)).patch_style(style);

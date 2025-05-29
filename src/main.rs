@@ -1,4 +1,4 @@
-use app::{App, CurrentScreen, DataMode};
+use app::{App, CurrentScreen, InputMode, write};
 use color_eyre::Result;
 use config::Config;
 use crossterm::{
@@ -31,7 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let backend = CrosstermBackend::new(stderr);
 	let mut terminal = Terminal::new(backend)?;
-
 	let mut app = App::new();
 	let res = run_app(&mut terminal, &mut app);
 
@@ -60,9 +59,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 				CurrentScreen::Main => match key.code {
 					KeyCode::Char('e') => app.current_screen = CurrentScreen::Editing,
 					KeyCode::Char('q') => app.current_screen = CurrentScreen::Exiting,
+					KeyCode::Char('g') | KeyCode::Char('o') => app.current_screen = CurrentScreen::Table,
 					_ => {}
 				},
-
 				CurrentScreen::Exiting => match key.code {
 					KeyCode::Char('y') => return Ok(true),
 					KeyCode::Char('n') | KeyCode::Char('q') => app.current_screen = CurrentScreen::Main,
@@ -72,38 +71,46 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 					// Print password to PASSWORD_FILE
 					KeyCode::Enter => {
 						// Skip print if fields are empty
-						if app.data.login.value().is_empty()
-							&& app.data.password.value().is_empty()
-							&& app.data.service.value().is_empty()
+						if app.input.login().is_empty()
+							&& app.input.password().is_empty()
+							&& app.input.service().is_empty()
 						{
 							continue;
 						}
 
-						app.print()?;
-						app.data.reset_data();
-						app.data_mode = DataMode::default();
+						write(app)?;
+						app.input.reset_data();
+						app.input_mode = InputMode::default();
 						app.current_screen = CurrentScreen::default();
 					}
 					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
 					// Switch fields
-					KeyCode::Down | KeyCode::Tab => match app.data_mode {
-						DataMode::Login => app.data_mode = DataMode::Password,
-						DataMode::Password => app.data_mode = DataMode::Service,
-						DataMode::Service => app.data_mode = DataMode::Login,
+					KeyCode::Down | KeyCode::Tab => match app.input_mode {
+						InputMode::Login => app.input_mode = InputMode::Password,
+						InputMode::Password => app.input_mode = InputMode::Service,
+						InputMode::Service => app.input_mode = InputMode::Login,
 					},
-					KeyCode::Up => match app.data_mode {
-						DataMode::Login => app.data_mode = DataMode::Service,
-						DataMode::Password => app.data_mode = DataMode::Login,
-						DataMode::Service => app.data_mode = DataMode::Password,
+					KeyCode::Up => match app.input_mode {
+						InputMode::Login => app.input_mode = InputMode::Service,
+						InputMode::Password => app.input_mode = InputMode::Login,
+						InputMode::Service => app.input_mode = InputMode::Password,
 					},
 					// Switch inputs for fields
 					_ => {
-						match app.data_mode {
-							DataMode::Login => app.data.login.handle_event(&event),
-							DataMode::Password => app.data.password.handle_event(&event),
-							DataMode::Service => app.data.service.handle_event(&event),
+						match app.input_mode {
+							InputMode::Login => app.input.login.handle_event(&event),
+							InputMode::Password => app.input.password.handle_event(&event),
+							InputMode::Service => app.input.service.handle_event(&event),
 						};
 					}
+				},
+				CurrentScreen::Table => match key.code {
+					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
+					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
+					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
+					KeyCode::Char('h') | KeyCode::Right => app.nex_column(),
+					KeyCode::Char('l') | KeyCode::Left => app.previous_column(),
+					_ => {}
 				},
 			}
 		}
