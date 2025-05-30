@@ -1,4 +1,4 @@
-use crate::app::{App, CurrentScreen, InputMode};
+use super::app::{App, CurrentScreen, ITEM_HEIGHT, InputMode};
 use ratatui::{
 	Frame,
 	layout::{Constraint, Layout, Margin, Rect},
@@ -7,9 +7,13 @@ use ratatui::{
 	widgets::{Block, Cell, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
 };
 
+const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
+const SCROLLBAR_END_SYMBOL: &str = "▼";
+
 pub fn ui(frame: &mut Frame, app: &mut App) {
 	if app.current_screen == CurrentScreen::Table {
-		let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+		// let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+		let vertical = Layout::vertical([Constraint::Min(5)]);
 		let rects = vertical.split(frame.area());
 		render_table(app, frame, rects[0]);
 		render_scrollbar(app, frame, rects[0]);
@@ -28,10 +32,14 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 }
 
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
-	let header_style = Style::default().fg(Color::White).bg(Color::Black);
-	let selected_row_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::White);
-	let selected_col_style = Style::default().fg(Color::Red);
-	let selected_cell_style = Style::default().add_modifier(Modifier::REVERSED).fg(Color::White);
+	let header_style = Style::default().fg(app.colors.header_fg).bg(app.colors.header_bg);
+	let selected_row_style = Style::default()
+		.add_modifier(Modifier::REVERSED)
+		.fg(app.colors.selected_row_style_fg);
+	let selected_col_style = Style::default().fg(app.colors.selected_column_style_fg);
+	let selected_cell_style = Style::default()
+		.add_modifier(Modifier::REVERSED)
+		.fg(app.colors.selected_cell_style_fg);
 	let header = ["Login", "Password", "Service"]
 		.into_iter()
 		.map(Cell::from)
@@ -48,8 +56,8 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 		item.into_iter()
 			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
 			.collect::<Row>()
-			.style(Style::new().fg(Color::White).bg(color))
-			.height(3)
+			.style(Style::new().fg(app.colors.row_fg).bg(color))
+			.height(ITEM_HEIGHT as u16)
 	});
 
 	let bar = " █ ";
@@ -67,7 +75,7 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	.column_highlight_style(selected_col_style)
 	.cell_highlight_style(selected_cell_style)
 	.highlight_symbol(Text::from(vec!["".into(), bar.into(), "".into()]))
-	.bg(Color::Reset)
+	.bg(app.colors.buffer_bg)
 	.highlight_spacing(HighlightSpacing::Always);
 	frame.render_stateful_widget(table, area, &mut app.state);
 }
@@ -76,8 +84,8 @@ fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
 	frame.render_stateful_widget(
 		Scrollbar::default()
 			.orientation(ScrollbarOrientation::VerticalRight)
-			.begin_symbol(None)
-			.end_symbol(None),
+			.begin_symbol(Some(SCROLLBAR_BEGIN_SYMBOL))
+			.end_symbol(Some(SCROLLBAR_END_SYMBOL)),
 		area.inner(Margin {
 			vertical: 1,
 			horizontal: 1,

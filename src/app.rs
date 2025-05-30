@@ -13,7 +13,7 @@ use tui_input::Input;
 use unicode_width::UnicodeWidthStr;
 
 const PASSWORD_FILE: &str = "psu.csv";
-const ITEM_HEIGHT: usize = 4;
+pub const ITEM_HEIGHT: usize = 3;
 
 #[derive(Debug, Default, PartialEq)]
 pub enum CurrentScreen {
@@ -59,7 +59,7 @@ impl App {
 			longest_item_lens: constraint_len_calculator(&data),
 			current_screen: CurrentScreen::default(),
 			scroll_state: ScrollbarState::new(data.len().saturating_sub(ITEM_HEIGHT)),
-			colors: TableColors::new(&tailwind::INDIGO),
+			colors: TableColors::new(&tailwind::EMERALD),
 			items: data,
 			state: TableState::default().with_selected(0),
 		}
