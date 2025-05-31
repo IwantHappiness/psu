@@ -105,7 +105,7 @@ impl App {
 }
 
 // Write password to PASSWORD_FILE
-pub fn write(app: &App) -> Result<()> {
+pub fn write(app: &mut App) -> Result<()> {
 	let mut wtr = get_writer(PASSWORD_FILE.into())?;
 
 	// SAFETY: because we create the file if it does not exist.
@@ -113,7 +113,10 @@ pub fn write(app: &App) -> Result<()> {
 		wtr.write_record(["Login", "Password", "Service"])?;
 	}
 
-	wtr.write_record(app.input.ref_array())?;
+	let mass = app.input.ref_array();
+	let data = Data::from(mass[0], mass[1], mass[2]);
+	wtr.write_record(mass)?;
+	app.items.push(data);
 	wtr.flush()?;
 
 	Ok(())
@@ -250,6 +253,14 @@ impl Data {
 			login: String::new(),
 			password: String::new(),
 			service: String::new(),
+		}
+	}
+
+	fn from<T: AsRef<str>>(login: T, password: T, service: T) -> Data {
+		Data {
+			login: login.as_ref().into(),
+			password: password.as_ref().into(),
+			service: service.as_ref().into(),
 		}
 	}
 
