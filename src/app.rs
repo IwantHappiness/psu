@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use csv::Writer;
 use ratatui::{
 	style::{Color, palette::tailwind},
@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	fs::{self, File},
 	path::PathBuf,
+	process::exit,
 };
 use tui_input::Input;
 use unicode_width::UnicodeWidthStr;
@@ -19,9 +20,9 @@ pub const ITEM_HEIGHT: usize = 3;
 pub enum CurrentScreen {
 	#[default]
 	Main,
-	Table,
-	Editing,
-	Exiting,
+	Popup,
+	// Editing,
+	// Exiting,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -52,7 +53,13 @@ pub struct App {
 
 impl App {
 	pub fn new() -> Self {
-		let data = read().unwrap_or_default();
+		let data = read().unwrap_or_else(|| {
+			create_csv_file()
+				.context("Error create csv file.")
+				.unwrap_or_else(|_| exit(1));
+			vec![]
+		});
+
 		Self {
 			input: UserInput::default(),
 			input_mode: InputMode::default(),
@@ -80,6 +87,21 @@ impl App {
 		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
 	}
 
+	pub fn next_input_mode(&mut self) {
+		self.input_mode = match self.input_mode {
+			InputMode::Login => InputMode::Password,
+			InputMode::Password => InputMode::Service,
+			InputMode::Service => InputMode::Login,
+		};
+	}
+
+	pub fn prev_input_mode(&mut self) {
+		self.input_mode = match self.input_mode {
+			InputMode::Login => InputMode::Service,
+			InputMode::Password => InputMode::Login,
+			InputMode::Service => InputMode::Password,
+		};
+	}
 	pub fn previous_row(&mut self) {
 		let i = match self.state.selected() {
 			Some(i) => {
@@ -114,9 +136,8 @@ pub fn write(app: &mut App) -> Result<()> {
 	}
 
 	let mass = app.input.ref_array();
-	let data = Data::from(mass[0], mass[1], mass[2]);
 	wtr.write_record(mass)?;
-	app.items.push(data);
+	app.items.push(mass.into());
 	wtr.flush()?;
 
 	Ok(())
@@ -133,10 +154,6 @@ fn read() -> Option<Vec<Data>> {
 	if let Ok(mut wtr) = csv::Reader::from_path(PASSWORD_FILE) {
 		let vec = wtr.deserialize::<Data>().flatten().collect();
 		return Some(vec);
-	}
-
-	if create_csv_file().is_ok() {
-		return Some(Vec::new());
 	}
 
 	None
@@ -245,38 +262,30 @@ pub struct Data {
 	pub password: String,
 	pub service: String,
 }
-
-#[allow(unused)]
 impl Data {
-	fn new() -> Self {
-		Data {
-			login: String::new(),
-			password: String::new(),
-			service: String::new(),
-		}
-	}
-
-	fn from<T: AsRef<str>>(login: T, password: T, service: T) -> Data {
-		Data {
-			login: login.as_ref().into(),
-			password: password.as_ref().into(),
-			service: service.as_ref().into(),
-		}
-	}
-
-	fn login(&self) -> &str {
+	pub fn login(&self) -> &str {
 		&self.login
 	}
 
-	fn password(&self) -> &str {
+	pub fn password(&self) -> &str {
 		&self.password
 	}
 
-	fn service(&self) -> &str {
+	pub fn service(&self) -> &str {
 		&self.service
 	}
 
 	pub fn ref_array(&self) -> [&str; 3] {
-		[&self.login, &self.password, &self.service]
+		[self.login(), self.password(), self.service()]
+	}
+}
+
+impl From<[&str; 3]> for Data {
+	fn from(value: [&str; 3]) -> Self {
+		Data {
+			login: value[0].into(),
+			password: value[1].into(),
+			service: value[2].into(),
+		}
 	}
 }
