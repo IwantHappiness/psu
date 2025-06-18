@@ -57,18 +57,16 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
-					KeyCode::Char('e') => app.current_screen = CurrentScreen::Editing,
-					KeyCode::Char('q') => app.current_screen = CurrentScreen::Exiting,
-					KeyCode::Char('g') | KeyCode::Char('o') => app.current_screen = CurrentScreen::Table,
+					KeyCode::Esc => return Ok(true),
+					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
+					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
+					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
+					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
+					KeyCode::Char('n') => app.current_screen = CurrentScreen::Popup,
 					_ => {}
 				},
-				CurrentScreen::Exiting => match key.code {
-					KeyCode::Char('y') => return Ok(true),
-					KeyCode::Char('n') | KeyCode::Char('q') => app.current_screen = CurrentScreen::Main,
-					_ => {}
-				},
-				CurrentScreen::Editing => match key.code {
-					// Print password to PASSWORD_FILE
+				CurrentScreen::Popup => match key.code {
+					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
 					KeyCode::Enter => {
 						// Skip print if fields are empty
 						if app.input.login().is_empty()
@@ -83,34 +81,17 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 						app.input_mode = InputMode::default();
 						app.current_screen = CurrentScreen::default();
 					}
-					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
 					// Switch fields
-					KeyCode::Down | KeyCode::Tab => match app.input_mode {
-						InputMode::Login => app.input_mode = InputMode::Password,
-						InputMode::Password => app.input_mode = InputMode::Service,
-						InputMode::Service => app.input_mode = InputMode::Login,
-					},
-					KeyCode::Up => match app.input_mode {
-						InputMode::Login => app.input_mode = InputMode::Service,
-						InputMode::Password => app.input_mode = InputMode::Login,
-						InputMode::Service => app.input_mode = InputMode::Password,
-					},
-					// Switch inputs for fields
+					KeyCode::Down | KeyCode::Tab => app.next_input_mode(),
+					KeyCode::Up => app.prev_input_mode(),
 					_ => {
+						// Switch inputs for fields
 						match app.input_mode {
 							InputMode::Login => app.input.login.handle_event(&event),
 							InputMode::Password => app.input.password.handle_event(&event),
 							InputMode::Service => app.input.service.handle_event(&event),
 						};
 					}
-				},
-				CurrentScreen::Table => match key.code {
-					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
-					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
-					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
-					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
-					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
-					_ => {}
 				},
 			}
 		}
