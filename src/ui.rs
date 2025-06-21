@@ -4,22 +4,51 @@ use ratatui::{
 	layout::{Constraint, Direction, Layout, Margin, Rect},
 	style::{Color, Modifier, Style, Stylize},
 	text::Text,
-	widgets::{Block, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
+	widgets::{
+		Block, BorderType, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+		Table,
+	},
 };
 
 const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
 const SCROLLBAR_END_SYMBOL: &str = "▼";
+const INFO_TEXT: [&str; 2] = [
+	"(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
+	"(N) new password| (Enter) send password",
+];
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
 	// TODO: for bottom help bar
-	// let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
-	let vertical = Layout::vertical([Constraint::Min(5)]);
+	let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
 	let rects = vertical.split(frame.area());
+
 	render_table(app, frame, rects[0]);
+	render_footer(app, frame, rects[1]);
 	render_scrollbar(app, frame, rects[0]);
+
 	if app.current_screen == CurrentScreen::Popup {
 		render_popup(app, frame);
 	}
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+	let popup_layout = Layout::default()
+		.direction(Direction::Vertical)
+		.constraints([
+			Constraint::Percentage((100 - percent_y) / 2),
+			Constraint::Percentage(percent_y),
+			Constraint::Percentage((100 - percent_y) / 2),
+		])
+		.split(r);
+
+	Layout::default()
+		.direction(Direction::Horizontal)
+		.constraints([
+			Constraint::Percentage((100 - percent_x) / 2),
+			Constraint::Percentage(percent_x),
+			Constraint::Percentage((100 - percent_x) / 2),
+		])
+		.split(popup_layout[1])[1] // Return the middle chunk
 }
 
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
@@ -143,22 +172,14 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 	frame.set_cursor_position((chunk.x + x as u16, chunk.y + 1));
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-	let popup_layout = Layout::default()
-		.direction(Direction::Vertical)
-		.constraints([
-			Constraint::Percentage((100 - percent_y) / 2),
-			Constraint::Percentage(percent_y),
-			Constraint::Percentage((100 - percent_y) / 2),
-		])
-		.split(r);
-
-	Layout::default()
-		.direction(Direction::Horizontal)
-		.constraints([
-			Constraint::Percentage((100 - percent_x) / 2),
-			Constraint::Percentage(percent_x),
-			Constraint::Percentage((100 - percent_x) / 2),
-		])
-		.split(popup_layout[1])[1] // Return the middle chunk
+fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
+	let info_footer = Paragraph::new(Text::from_iter(INFO_TEXT))
+		.style(Style::new().fg(app.colors.row_fg).bg(app.colors.buffer_bg))
+		.centered()
+		.block(
+			Block::bordered()
+				.border_type(BorderType::Double)
+				.border_style(Style::new().fg(app.colors.footer_border_color)),
+		);
+	frame.render_widget(info_footer, area);
 }
