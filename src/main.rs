@@ -1,4 +1,4 @@
-use app::{App, CurrentScreen, InputMode, write};
+use app::{App, CurrentScreen, Data, InputMode, write};
 use color_eyre::Result;
 use config::Config;
 use crossterm::{

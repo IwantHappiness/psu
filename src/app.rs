@@ -40,7 +40,7 @@ pub struct App {
 
 	pub state: TableState,
 	pub longest_item_lens: (u16, u16, u16),
-	pub items: Vec<Data>,
+	pub items: Vec<Password>,
 
 	pub scroll_state: ScrollbarState,
 	// Current field
@@ -87,6 +87,21 @@ impl App {
 		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
 	}
 
+	pub fn previous_row(&mut self) {
+		let i = match self.state.selected() {
+			Some(i) => {
+				if i == 0 {
+					self.items.len() - 1
+				} else {
+					i - 1
+				}
+			}
+			None => 0,
+		};
+		self.state.select(Some(i));
+		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
+	}
+
 	pub fn next_input_mode(&mut self) {
 		self.input_mode = match self.input_mode {
 			InputMode::Login => InputMode::Password,
@@ -101,20 +116,6 @@ impl App {
 			InputMode::Password => InputMode::Login,
 			InputMode::Service => InputMode::Password,
 		};
-	}
-	pub fn previous_row(&mut self) {
-		let i = match self.state.selected() {
-			Some(i) => {
-				if i == 0 {
-					self.items.len() - 1
-				} else {
-					i - 1
-				}
-			}
-			None => 0,
-		};
-		self.state.select(Some(i));
-		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
 	}
 
 	pub fn nex_column(&mut self) {
@@ -132,14 +133,16 @@ pub fn write(app: &mut App) -> Result<()> {
 
 	// SAFETY: because we create the file if it does not exist.
 	if fs::metadata(PASSWORD_FILE)?.len() == 0 {
-		wtr.write_record(["Login", "Password", "Service"])?;
+		create_csv_file()?;
 	}
 
-	let mass = app.input.ref_array();
-	wtr.write_record(mass)?;
-	app.items.push(mass.into());
-	wtr.flush()?;
+	let len = app.items.len();
+	let (login, password, service) = app.input.ref_array().into();
+	let data = Password::new(len as u32, login, password, service);
 
+	wtr.write_record([len.to_string().as_str(), login, password, service])?;
+	app.items.push(data);
+	wtr.flush()?;
 	Ok(())
 }
 
@@ -150,9 +153,9 @@ fn get_writer(path: PathBuf) -> Result<Writer<File>> {
 		.from_writer(std::fs::OpenOptions::new().create(true).append(true).open(path)?))
 }
 
-fn read() -> Option<Vec<Data>> {
+fn read() -> Option<Vec<Password>> {
 	if let Ok(mut wtr) = csv::Reader::from_path(PASSWORD_FILE) {
-		let vec = wtr.deserialize::<Data>().flatten().collect();
+		let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
 		return Some(vec);
 	}
 
@@ -161,13 +164,13 @@ fn read() -> Option<Vec<Data>> {
 
 fn create_csv_file() -> Result<()> {
 	let mut wtr = get_writer(PASSWORD_FILE.into())?;
-	wtr.write_record(["Login", "Password", "Service"])?;
+	wtr.write_record(["Id", "Login", "Password", "Service"])?;
 	wtr.flush()?;
 
 	Ok(())
 }
 
-fn constraint_len_calculator(items: &[Data]) -> (u16, u16, u16) {
+fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 	let name_len = items
 		.iter()
 		.map(Data::login)
@@ -224,6 +227,16 @@ impl TableColors {
 	}
 }
 
+pub trait Data {
+	fn login(&self) -> &str;
+
+	fn password(&self) -> &str;
+
+	fn service(&self) -> &str;
+
+	fn ref_array(&self) -> [&str; 3];
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct UserInput {
 	pub login: Input,
@@ -231,23 +244,25 @@ pub struct UserInput {
 	pub service: Input,
 }
 
-impl UserInput {
-	pub fn login(&self) -> &str {
+impl Data for UserInput {
+	fn login(&self) -> &str {
 		self.login.value()
 	}
 
-	pub fn password(&self) -> &str {
+	fn password(&self) -> &str {
 		self.password.value()
 	}
 
-	pub fn service(&self) -> &str {
+	fn service(&self) -> &str {
 		self.service.value()
 	}
 
-	pub fn ref_array(&self) -> [&str; 3] {
+	fn ref_array(&self) -> [&str; 3] {
 		[self.login.value(), self.password.value(), self.service.value()]
 	}
+}
 
+impl UserInput {
 	pub fn reset_data(&mut self) {
 		self.login.reset();
 		self.password.reset();
@@ -257,35 +272,52 @@ impl UserInput {
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub struct Data {
+pub struct Password {
+	pub id: u32,
 	pub login: String,
 	pub password: String,
 	pub service: String,
 }
-impl Data {
-	pub fn login(&self) -> &str {
-		&self.login
+
+#[allow(unused)]
+impl Password {
+	pub fn new<T: AsRef<str>>(id: u32, login: T, password: T, service: T) -> Self {
+		Self {
+			id,
+			login: login.as_ref().into(),
+			password: password.as_ref().into(),
+			service: service.as_ref().into(),
+		}
 	}
 
-	pub fn password(&self) -> &str {
+	pub fn id(&self) -> &u32 {
+		&self.id
+	}
+}
+
+impl Data for Password {
+	fn login(&self) -> &str {
+		&self.login
+	}
+	fn password(&self) -> &str {
 		&self.password
 	}
 
-	pub fn service(&self) -> &str {
+	fn service(&self) -> &str {
 		&self.service
 	}
 
-	pub fn ref_array(&self) -> [&str; 3] {
+	fn ref_array(&self) -> [&str; 3] {
 		[self.login(), self.password(), self.service()]
 	}
 }
 
-impl From<[&str; 3]> for Data {
-	fn from(value: [&str; 3]) -> Self {
-		Data {
-			login: value[0].into(),
-			password: value[1].into(),
-			service: value[2].into(),
+impl From<Password> for UserInput {
+	fn from(password: Password) -> Self {
+		UserInput {
+			login: password.login().into(),
+			password: password.password().into(),
+			service: password.service().into(),
 		}
 	}
 }
