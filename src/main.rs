@@ -67,10 +67,20 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 						app.write()?;
 					}
 					KeyCode::Char('n') | KeyCode::Char('N') => app.current_screen = CurrentScreen::Popup,
+					KeyCode::Char('m') | KeyCode::Char('M') => {
+						app.modify();
+						app.current_screen = CurrentScreen::Popup;
+					}
 					_ => {}
 				},
 				CurrentScreen::Popup => match key.code {
-					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
+					KeyCode::Esc => {
+						if app.is_modify {
+							app.input.reset_data();
+							app.is_modify = false;
+						}
+						app.current_screen = CurrentScreen::Main;
+					}
 					KeyCode::Enter => {
 						// Skip print if fields are empty
 						if app.input.login().is_empty()
