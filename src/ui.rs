@@ -14,7 +14,7 @@ const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
 const SCROLLBAR_END_SYMBOL: &str = "▼";
 const INFO_TEXT: [&str; 2] = [
 	"(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
-	"(N) new password| (Enter) send password",
+	"(N) new password | (Enter) send password | (D) delete password",
 ];
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
@@ -75,8 +75,8 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 			0 => app.colors.normal_row_color,
 			_ => app.colors.alt_row_color,
 		};
-		let item = data.ref_array();
-		item.into_iter()
+		data.ref_array()
+			.into_iter()
 			.skip(1)
 			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
 			.collect::<Row>()

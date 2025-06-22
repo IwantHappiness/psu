@@ -53,7 +53,7 @@ pub struct App {
 
 impl App {
 	pub fn new() -> Self {
-		let data = read().unwrap_or_default();
+		let data = App::read(PASSWORD_FILE).unwrap_or_default();
 
 		Self {
 			input: UserInput::default(),
@@ -120,30 +120,46 @@ impl App {
 	pub fn previous_column(&mut self) {
 		self.state.select_previous_column();
 	}
-}
 
-// Write password to PASSWORD_FILE
-pub fn write(app: &mut App) -> Result<()> {
-	let new_id = app.items.len() as u32;
-	let (login, password, service) = app.input.ref_array().into();
-	let data = Password::new(new_id, login, password, service);
-
-	app.items.push(data);
-
-	let mut wtr = get_writer(TEMP_FILE)?;
-	create_csv_file(TEMP_FILE)?;
-
-	for (index, password) in app.items.iter_mut().enumerate() {
-		if password.id != index as u32 {
-			password.id = index as u32;
-		}
-
-		wtr.write_record(password.ref_array())?;
+	pub fn add_password(&mut self) {
+		let new_id = self.items.len() as u32;
+		let (login, password, service) = self.input.ref_array().into();
+		let data = Password::new(new_id, login, password, service);
+		self.items.push(data);
 	}
-	wtr.flush()?;
 
-	fs::rename(TEMP_FILE, PASSWORD_FILE)?;
-	Ok(())
+	// Write password to PASSWORD_FILE
+	pub fn write(&mut self) -> Result<()> {
+		let mut wtr = get_writer(TEMP_FILE)?;
+		create_csv_file(TEMP_FILE)?;
+
+		for (index, password) in self.items.iter_mut().enumerate() {
+			if password.id != index as u32 {
+				password.id = index as u32;
+			}
+
+			wtr.write_record(password.ref_array())?;
+		}
+		wtr.flush()?;
+
+		fs::rename(TEMP_FILE, PASSWORD_FILE)?;
+		Ok(())
+	}
+
+	pub fn read<T: AsRef<Path>>(path: T) -> Option<Vec<Password>> {
+		if let Ok(mut wtr) = csv::Reader::from_path(path) {
+			let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
+			return Some(vec);
+		};
+
+		None
+	}
+
+	pub fn delete(&mut self) {
+		if let Some(index) = self.state.selected() {
+			self.items.remove(index);
+		};
+	}
 }
 
 fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
@@ -151,15 +167,6 @@ fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
 		.delimiter(b',')
 		.quote_style(csv::QuoteStyle::NonNumeric)
 		.from_writer(std::fs::OpenOptions::new().create(true).append(true).open(path)?))
-}
-
-fn read() -> Option<Vec<Password>> {
-	if let Ok(mut wtr) = csv::Reader::from_path(PASSWORD_FILE) {
-		let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
-		return Some(vec);
-	}
-
-	None
 }
 
 fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {

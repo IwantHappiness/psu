@@ -1,4 +1,4 @@
-use app::{App, CurrentScreen, Data, InputMode, write};
+use app::{App, CurrentScreen, Data, InputMode};
 use color_eyre::Result;
 use config::Config;
 use crossterm::{
@@ -62,7 +62,11 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
 					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
 					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
-					KeyCode::Char('n') => app.current_screen = CurrentScreen::Popup,
+					KeyCode::Char('d') | KeyCode::Char('D') => {
+						app.delete();
+						app.write()?;
+					}
+					KeyCode::Char('n') | KeyCode::Char('N') => app.current_screen = CurrentScreen::Popup,
 					_ => {}
 				},
 				CurrentScreen::Popup => match key.code {
@@ -76,7 +80,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 							continue;
 						}
 
-						write(app)?;
+						app.add_password();
+						app.write()?;
 						app.input.reset_data();
 						app.input_mode = InputMode::default();
 						app.current_screen = CurrentScreen::default();
