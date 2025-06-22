@@ -9,12 +9,13 @@ use ratatui::{
 		Table,
 	},
 };
+use unicode_width::UnicodeWidthStr;
 
 const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
 const SCROLLBAR_END_SYMBOL: &str = "▼";
 const INFO_TEXT: [&str; 2] = [
 	"(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
-	"(N) new password | (Enter) send password | (D) delete password",
+	"(N) new password | (Enter) send password | (D) delete password | (M) modify password",
 ];
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
@@ -85,12 +86,13 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	});
 
 	let bar = " █ ";
+	let longest_item_lens = constraint_len_calculator(&app.items);
 	let table = Table::new(
 		rows,
 		[
-			Constraint::Min(app.longest_item_lens.0 + 1),
-			Constraint::Min(app.longest_item_lens.1 + 1),
-			Constraint::Min(app.longest_item_lens.2),
+			Constraint::Min(longest_item_lens.0 + 1),
+			Constraint::Min(longest_item_lens.1 + 1),
+			Constraint::Min(longest_item_lens.2),
 		],
 	)
 	.header(header)
@@ -182,4 +184,29 @@ fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
 				.border_style(Style::new().fg(app.colors.footer_border_color)),
 		);
 	frame.render_widget(info_footer, area);
+}
+
+fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
+	let name_len = items
+		.iter()
+		.map(Data::login)
+		.map(UnicodeWidthStr::width)
+		.max()
+		.unwrap_or(0) as u16;
+
+	let password_len: u16 = items
+		.iter()
+		.map(Data::password)
+		.map(UnicodeWidthStr::width)
+		.max()
+		.unwrap_or(0) as u16;
+
+	let service_len = items
+		.iter()
+		.map(Data::service)
+		.map(UnicodeWidthStr::width)
+		.max()
+		.unwrap_or(0) as u16;
+
+	(name_len, password_len, service_len)
 }

@@ -10,7 +10,6 @@ use std::{
 	path::Path,
 };
 use tui_input::Input;
-use unicode_width::UnicodeWidthStr;
 
 const PASSWORD_FILE: &str = "psu.csv";
 const TEMP_FILE: &str = "psu.csv.temp";
@@ -21,8 +20,6 @@ pub enum CurrentScreen {
 	#[default]
 	Main,
 	Popup,
-	// Editing,
-	// Exiting,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -37,18 +34,20 @@ pub enum InputMode {
 pub struct App {
 	// User form
 	pub input: UserInput,
-
-	pub state: TableState,
-	pub longest_item_lens: (u16, u16, u16),
+	// Vector with passwords
 	pub items: Vec<Password>,
-
-	pub scroll_state: ScrollbarState,
 	// Current field
 	pub input_mode: InputMode,
+	// Table
+	pub state: TableState,
+	// Pallette for table
+	pub colors: TableColors,
+	// Scroll State
+	pub scroll_state: ScrollbarState,
 	// Current input mode
 	pub current_screen: CurrentScreen,
-
-	pub colors: TableColors,
+	// Need for handle mode input password
+	pub is_modify: bool,
 }
 
 impl App {
@@ -58,12 +57,12 @@ impl App {
 		Self {
 			input: UserInput::default(),
 			input_mode: InputMode::default(),
-			longest_item_lens: constraint_len_calculator(&data),
 			current_screen: CurrentScreen::default(),
-			scroll_state: ScrollbarState::new(data.len().saturating_sub(ITEM_HEIGHT)),
-			colors: TableColors::new(&tailwind::EMERALD),
-			items: data,
 			state: TableState::default().with_selected(0),
+			colors: TableColors::new(&tailwind::EMERALD),
+			scroll_state: ScrollbarState::new(data.len().saturating_sub(ITEM_HEIGHT)),
+			is_modify: false,
+			items: data,
 		}
 	}
 
@@ -122,10 +121,21 @@ impl App {
 	}
 
 	pub fn add_password(&mut self) {
-		let new_id = self.items.len() as u32;
 		let (login, password, service) = self.input.ref_array().into();
-		let data = Password::new(new_id, login, password, service);
-		self.items.push(data);
+
+		if self.is_modify {
+			if let Some(index) = self.state.selected() {
+				let data = &mut self.items[index];
+
+				data.login = login.into();
+				data.password = password.into();
+				data.service = service.into();
+			}
+		} else {
+			let new_id = self.items.len() as u32;
+			let data = Password::new(new_id, login, password, service);
+			self.items.push(data);
+		}
 	}
 
 	// Write password to PASSWORD_FILE
@@ -160,6 +170,14 @@ impl App {
 			self.items.remove(index);
 		};
 	}
+
+	pub fn modify(&mut self) {
+		if let Some(index) = self.state.selected() {
+			let data = &self.items[index];
+			self.input = data.into();
+		}
+		self.is_modify = true;
+	}
 }
 
 fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
@@ -175,31 +193,6 @@ fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 	wtr.flush()?;
 
 	Ok(())
-}
-
-fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
-	let name_len = items
-		.iter()
-		.map(Data::login)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.unwrap_or(0) as u16;
-
-	let password_len: u16 = items
-		.iter()
-		.map(Data::password)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.unwrap_or(0) as u16;
-
-	let service_len = items
-		.iter()
-		.map(Data::service)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.unwrap_or(0) as u16;
-
-	(name_len, password_len, service_len)
 }
 
 #[allow(unused)]
@@ -328,6 +321,26 @@ impl From<Password> for UserInput {
 			login: password.login().into(),
 			password: password.password().into(),
 			service: password.service().into(),
+		}
+	}
+}
+
+impl From<&Password> for UserInput {
+	fn from(password: &Password) -> Self {
+		UserInput {
+			login: password.login().into(),
+			password: password.password().into(),
+			service: password.service().into(),
+		}
+	}
+}
+
+impl From<[String; 3]> for UserInput {
+	fn from(value: [String; 3]) -> Self {
+		UserInput {
+			login: value[0].as_str().into(),
+			password: value[1].as_str().into(),
+			service: value[2].as_str().into(),
 		}
 	}
 }
