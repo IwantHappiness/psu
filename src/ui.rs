@@ -18,13 +18,12 @@ const INFO_TEXT: [&str; 2] = [
 ];
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
-	// TODO: for bottom help bar
 	let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
 	let rects = vertical.split(frame.area());
 
 	render_table(app, frame, rects[0]);
-	render_footer(app, frame, rects[1]);
 	render_scrollbar(app, frame, rects[0]);
+	render_footer(app, frame, rects[1]);
 
 	if app.current_screen == CurrentScreen::Popup {
 		render_popup(app, frame);
@@ -78,6 +77,7 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 		};
 		let item = data.ref_array();
 		item.into_iter()
+			.skip(1)
 			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
 			.collect::<Row>()
 			.style(Style::new().fg(app.colors.row_fg).bg(color))

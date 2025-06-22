@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use csv::Writer;
 use ratatui::{
 	style::{Color, palette::tailwind},
@@ -7,13 +7,13 @@ use ratatui::{
 use serde::{Deserialize, Serialize};
 use std::{
 	fs::{self, File},
-	path::PathBuf,
-	process::exit,
+	path::Path,
 };
 use tui_input::Input;
 use unicode_width::UnicodeWidthStr;
 
 const PASSWORD_FILE: &str = "psu.csv";
+const TEMP_FILE: &str = "psu.csv.temp";
 pub const ITEM_HEIGHT: usize = 3;
 
 #[derive(Debug, Default, PartialEq)]
@@ -53,12 +53,7 @@ pub struct App {
 
 impl App {
 	pub fn new() -> Self {
-		let data = read().unwrap_or_else(|| {
-			create_csv_file()
-				.context("Error create csv file.")
-				.unwrap_or_else(|_| exit(1));
-			vec![]
-		});
+		let data = read().unwrap_or_default();
 
 		Self {
 			input: UserInput::default(),
@@ -129,24 +124,29 @@ impl App {
 
 // Write password to PASSWORD_FILE
 pub fn write(app: &mut App) -> Result<()> {
-	let mut wtr = get_writer(PASSWORD_FILE.into())?;
-
-	// SAFETY: because we create the file if it does not exist.
-	if fs::metadata(PASSWORD_FILE)?.len() == 0 {
-		create_csv_file()?;
-	}
-
-	let len = app.items.len();
+	let new_id = app.items.len() as u32;
 	let (login, password, service) = app.input.ref_array().into();
-	let data = Password::new(len as u32, login, password, service);
+	let data = Password::new(new_id, login, password, service);
 
-	wtr.write_record([len.to_string().as_str(), login, password, service])?;
 	app.items.push(data);
+
+	let mut wtr = get_writer(TEMP_FILE)?;
+	create_csv_file(TEMP_FILE)?;
+
+	for (index, password) in app.items.iter_mut().enumerate() {
+		if password.id != index as u32 {
+			password.id = index as u32;
+		}
+
+		wtr.write_record(password.ref_array())?;
+	}
 	wtr.flush()?;
+
+	fs::rename(TEMP_FILE, PASSWORD_FILE)?;
 	Ok(())
 }
 
-fn get_writer(path: PathBuf) -> Result<Writer<File>> {
+fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
 	Ok(csv::WriterBuilder::new()
 		.delimiter(b',')
 		.quote_style(csv::QuoteStyle::NonNumeric)
@@ -162,8 +162,8 @@ fn read() -> Option<Vec<Password>> {
 	None
 }
 
-fn create_csv_file() -> Result<()> {
-	let mut wtr = get_writer(PASSWORD_FILE.into())?;
+fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
+	let mut wtr = get_writer(path)?;
 	wtr.write_record(["Id", "Login", "Password", "Service"])?;
 	wtr.flush()?;
 
@@ -176,23 +176,23 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 		.map(Data::login)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0);
+		.unwrap_or(0) as u16;
 
-	let password_len = items
+	let password_len: u16 = items
 		.iter()
 		.map(Data::password)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0);
+		.unwrap_or(0) as u16;
 
 	let service_len = items
 		.iter()
 		.map(Data::service)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0);
+		.unwrap_or(0) as u16;
 
-	(name_len as u16, password_len as u16, service_len as u16)
+	(name_len, password_len, service_len)
 }
 
 #[allow(unused)]
@@ -233,8 +233,6 @@ pub trait Data {
 	fn password(&self) -> &str;
 
 	fn service(&self) -> &str;
-
-	fn ref_array(&self) -> [&str; 3];
 }
 
 #[derive(Clone, Debug, Default)]
@@ -256,10 +254,6 @@ impl Data for UserInput {
 	fn service(&self) -> &str {
 		self.service.value()
 	}
-
-	fn ref_array(&self) -> [&str; 3] {
-		[self.login.value(), self.password.value(), self.service.value()]
-	}
 }
 
 impl UserInput {
@@ -267,6 +261,10 @@ impl UserInput {
 		self.login.reset();
 		self.password.reset();
 		self.service.reset();
+	}
+
+	fn ref_array(&self) -> [&str; 3] {
+		[self.login.value(), self.password.value(), self.service.value()]
 	}
 }
 
@@ -290,8 +288,17 @@ impl Password {
 		}
 	}
 
-	pub fn id(&self) -> &u32 {
-		&self.id
+	pub fn id(&self) -> String {
+		self.id.to_string()
+	}
+
+	pub fn ref_array(&self) -> [String; 4] {
+		[
+			self.id(),
+			self.login().into(),
+			self.password().into(),
+			self.service().into(),
+		]
 	}
 }
 
@@ -305,10 +312,6 @@ impl Data for Password {
 
 	fn service(&self) -> &str {
 		&self.service
-	}
-
-	fn ref_array(&self) -> [&str; 3] {
-		[self.login(), self.password(), self.service()]
 	}
 }
 
