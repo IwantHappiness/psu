@@ -31,21 +31,20 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let backend = CrosstermBackend::new(stderr);
 	let mut terminal = Terminal::new(backend)?;
-	let mut app = App::new();
-	let res = run_app(&mut terminal, &mut app);
+	let res = run_app(&mut terminal, &mut App::new());
 
 	disable_raw_mode()?;
 	execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
 	terminal.show_cursor()?;
 
 	if let Err(err) = res {
-		println!("{:?}", err);
+		eprintln!("Error: {:?}", err);
 	}
 
 	Ok(())
 }
 
-fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Result<bool> {
+fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Result<bool, Box<dyn Error>> {
 	loop {
 		terminal.draw(|frame| ui(frame, app))?;
 
@@ -58,6 +57,8 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Res
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
 					KeyCode::Esc => return Ok(true),
+					KeyCode::Char('p') => app.clip()?,
+					KeyCode::Char('P') => app.clip_all()?,
 					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
 					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),

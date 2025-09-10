@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use clipboard::{ClipboardContext, ClipboardProvider};
 use csv::Writer;
 use ratatui::{
 	style::{Color, palette::tailwind},
@@ -6,6 +7,7 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+	error::Error,
 	fs::{self, File},
 	path::Path,
 };
@@ -177,6 +179,39 @@ impl App {
 			self.input = data.into();
 		}
 		self.is_modify = true;
+	}
+
+	pub fn clip(&self) -> anyhow::Result<(), Box<dyn Error>> {
+		if let Some(index) = self.state.selected() {
+			let mut ctx = ClipboardContext::new()?;
+
+			let password = self.items.get(index).context("No get Password.")?;
+
+			let data = match self.state.selected_column() {
+				Some(0) => password.login(),
+				Some(1) => password.password(),
+				Some(2) => password.service(),
+				_ => password.password(),
+			};
+
+			ctx.set_contents(data.into())?;
+		}
+
+		Ok(())
+	}
+
+	pub fn clip_all(&self) -> anyhow::Result<(), Box<dyn Error>> {
+		if let Some(index) = self.state.selected() {
+			let mut ctx = ClipboardContext::new()?;
+
+			let password = self.items.get(index).context("No get Password.")?;
+
+			let data = format!("{}, {}, {}", password.login, password.password, password.service);
+
+			ctx.set_contents(data.into())?;
+		}
+
+		Ok(())
 	}
 }
 
