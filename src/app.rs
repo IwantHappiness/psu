@@ -142,8 +142,8 @@ impl App {
 
 	// Write password to PASSWORD_FILE
 	pub fn write(&mut self) -> Result<()> {
-		let mut wtr = get_writer(TEMP_FILE)?;
 		create_csv_file(TEMP_FILE)?;
+		let mut wtr = get_writer(TEMP_FILE)?;
 
 		for (index, password) in self.items.iter_mut().enumerate() {
 			if password.id != index as u32 {
@@ -184,7 +184,6 @@ impl App {
 	pub fn clip(&self) -> anyhow::Result<(), Box<dyn Error>> {
 		if let Some(index) = self.state.selected() {
 			let mut ctx = ClipboardContext::new()?;
-
 			let password = self.items.get(index).context("No get Password.")?;
 
 			let data = match self.state.selected_column() {
@@ -203,12 +202,12 @@ impl App {
 	pub fn clip_all(&self) -> anyhow::Result<(), Box<dyn Error>> {
 		if let Some(index) = self.state.selected() {
 			let mut ctx = ClipboardContext::new()?;
-
 			let password = self.items.get(index).context("No get Password.")?;
 
-			let data = format!("{}, {}, {}", password.login, password.password, password.service);
-
-			ctx.set_contents(data.into())?;
+			ctx.set_contents(format!(
+				"{}, {}, {}",
+				password.login, password.password, password.service
+			))?;
 		}
 
 		Ok(())
@@ -230,7 +229,6 @@ fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 	Ok(())
 }
 
-#[allow(unused)]
 #[derive(Default)]
 pub struct TableColors {
 	pub alt_row_color: Color,
