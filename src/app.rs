@@ -1,8 +1,9 @@
+use super::ui::TableColors;
 use anyhow::{Context, Result};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use csv::Writer;
 use ratatui::{
-	style::{Color, palette::tailwind},
+	style::palette::tailwind,
 	widgets::{ScrollbarState, TableState},
 };
 use serde::{Deserialize, Serialize};
@@ -61,7 +62,7 @@ impl App {
 			input_mode: InputMode::default(),
 			current_screen: CurrentScreen::default(),
 			state: TableState::default().with_selected(0),
-			colors: TableColors::new(&tailwind::EMERALD),
+			colors: TableColors::new(&tailwind::GRAY),
 			scroll_state: ScrollbarState::new(data.len().saturating_sub(ITEM_HEIGHT)),
 			is_modify: false,
 			items: data,
@@ -227,37 +228,6 @@ fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 	wtr.flush()?;
 
 	Ok(())
-}
-
-#[derive(Default)]
-pub struct TableColors {
-	pub alt_row_color: Color,
-	pub buffer_bg: Color,
-	pub footer_border_color: Color,
-	pub header_bg: Color,
-	pub header_fg: Color,
-	pub normal_row_color: Color,
-	pub row_fg: Color,
-	pub selected_cell_style_fg: Color,
-	pub selected_column_style_fg: Color,
-	pub selected_row_style_fg: Color,
-}
-
-impl TableColors {
-	const fn new(color: &tailwind::Palette) -> Self {
-		Self {
-			buffer_bg: tailwind::SLATE.c950,
-			header_bg: color.c900,
-			header_fg: tailwind::SLATE.c200,
-			row_fg: tailwind::SLATE.c200,
-			selected_row_style_fg: color.c400,
-			selected_column_style_fg: color.c400,
-			selected_cell_style_fg: color.c600,
-			normal_row_color: tailwind::SLATE.c950,
-			alt_row_color: tailwind::SLATE.c900,
-			footer_border_color: color.c400,
-		}
-	}
 }
 
 pub trait Data {

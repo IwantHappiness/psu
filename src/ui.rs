@@ -2,7 +2,7 @@ use super::app::{App, CurrentScreen, Data, ITEM_HEIGHT, InputMode};
 use ratatui::{
 	Frame,
 	layout::{Constraint, Direction, Layout, Margin, Rect},
-	style::{Color, Modifier, Style, Stylize},
+	style::{Color, Modifier, Style, Stylize, palette::tailwind},
 	text::Text,
 	widgets::{
 		Block, BorderType, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
@@ -17,6 +17,37 @@ const INFO_TEXT: [&str; 2] = [
 	"(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
 	"(N) new password | (Enter) send password | (D) delete password | (M) modify password",
 ];
+
+#[derive(Default)]
+pub struct TableColors {
+	pub alt_row_color: Color,
+	pub buffer_bg: Color,
+	pub footer_border_color: Color,
+	pub header_bg: Color,
+	pub header_fg: Color,
+	pub normal_row_color: Color,
+	pub row_fg: Color,
+	pub selected_cell_style_fg: Color,
+	pub selected_column_style_fg: Color,
+	pub selected_row_style_fg: Color,
+}
+
+impl TableColors {
+	pub const fn new(color: &tailwind::Palette) -> Self {
+		Self {
+			buffer_bg: Color::Reset,
+			header_bg: Color::Reset,
+			header_fg: tailwind::SLATE.c200,
+			row_fg: tailwind::SLATE.c50,
+			selected_row_style_fg: color.c400,
+			selected_column_style_fg: color.c400,
+			selected_cell_style_fg: color.c600,
+			normal_row_color: Color::Reset,
+			alt_row_color: Color::Reset,
+			footer_border_color: color.c50,
+		}
+	}
+}
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
 	let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
