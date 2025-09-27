@@ -8,7 +8,9 @@ use ratatui::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+	borrow::Borrow,
 	error::Error,
+	fmt::Display,
 	fs::{self, File},
 	path::Path,
 };
@@ -205,10 +207,7 @@ impl App {
 			let mut ctx = ClipboardContext::new()?;
 			let password = self.items.get(index).context("No get Password.")?;
 
-			ctx.set_contents(format!(
-				"{}, {}, {}",
-				password.login, password.password, password.service
-			))?;
+			ctx.set_contents(password.to_string())?;
 		}
 
 		Ok(())
@@ -245,6 +244,26 @@ pub struct UserInput {
 	pub service: Input,
 }
 
+impl UserInput {
+	pub fn reset_data(&mut self) {
+		self.login.reset();
+		self.password.reset();
+		self.service.reset();
+	}
+
+	pub fn ref_array(&self) -> [&str; 3] {
+		[self.login(), self.password(), self.service()]
+	}
+
+	pub fn from_array(value: &[String; 3]) -> Self {
+		Self {
+			login: value[0].as_str().into(),
+			password: value[1].as_str().into(),
+			service: value[2].as_str().into(),
+		}
+	}
+}
+
 impl Data for UserInput {
 	fn login(&self) -> &str {
 		self.login.value()
@@ -259,18 +278,6 @@ impl Data for UserInput {
 	}
 }
 
-impl UserInput {
-	pub fn reset_data(&mut self) {
-		self.login.reset();
-		self.password.reset();
-		self.service.reset();
-	}
-
-	fn ref_array(&self) -> [&str; 3] {
-		[self.login.value(), self.password.value(), self.service.value()]
-	}
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Password {
@@ -280,7 +287,6 @@ pub struct Password {
 	pub service: String,
 }
 
-#[allow(unused)]
 impl Password {
 	pub fn new<T: AsRef<str>>(id: u32, login: T, password: T, service: T) -> Self {
 		Self {
@@ -305,6 +311,12 @@ impl Password {
 	}
 }
 
+impl Display for Password {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}   {}   {}", self.login, self.password, self.service)
+	}
+}
+
 impl Data for Password {
 	fn login(&self) -> &str {
 		&self.login
@@ -318,32 +330,13 @@ impl Data for Password {
 	}
 }
 
-impl From<Password> for UserInput {
-	fn from(password: Password) -> Self {
-		UserInput {
-			login: password.login().into(),
-			password: password.password().into(),
-			service: password.service().into(),
-		}
-	}
-}
-
-impl From<&Password> for UserInput {
-	fn from(password: &Password) -> Self {
-		UserInput {
-			login: password.login().into(),
-			password: password.password().into(),
-			service: password.service().into(),
-		}
-	}
-}
-
-impl From<[String; 3]> for UserInput {
-	fn from(value: [String; 3]) -> Self {
-		UserInput {
-			login: value[0].as_str().into(),
-			password: value[1].as_str().into(),
-			service: value[2].as_str().into(),
+impl<T: Borrow<Password>> From<T> for UserInput {
+	fn from(value: T) -> Self {
+		let value = value.borrow();
+		Self {
+			login: value.login().into(),
+			password: value.password().into(),
+			service: value.service().into(),
 		}
 	}
 }
