@@ -11,6 +11,7 @@ use ratatui::{
 };
 use unicode_width::UnicodeWidthStr;
 
+const BAR_SYMBOL: &str = " █ ";
 const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
 const SCROLLBAR_END_SYMBOL: &str = "▼";
 const INFO_TEXT: [&str; 2] = [
@@ -84,23 +85,21 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	let header_style = Style::default().fg(app.colors.header_fg).bg(app.colors.header_bg);
-
-	let selected_row_style = Style::default()
-		.add_modifier(Modifier::REVERSED)
-		.fg(app.colors.selected_row_style_fg);
-
-	let selected_col_style = Style::default().fg(app.colors.selected_column_style_fg);
-
-	let selected_cell_style = Style::default()
-		.add_modifier(Modifier::REVERSED)
-		.fg(app.colors.selected_cell_style_fg);
-
 	let header = ["Login", "Password", "Service"]
 		.into_iter()
 		.map(Cell::from)
 		.collect::<Row>()
 		.style(header_style)
 		.height(1);
+
+	let selected_row_style = Style::default()
+		.add_modifier(Modifier::REVERSED)
+		.fg(app.colors.selected_row_style_fg);
+
+	let selected_col_style = Style::default().fg(app.colors.selected_column_style_fg);
+	let selected_cell_style = Style::default()
+		.add_modifier(Modifier::REVERSED)
+		.fg(app.colors.selected_cell_style_fg);
 
 	let rows = app.items.iter().enumerate().map(|(i, data)| {
 		let color = match i % 2 {
@@ -116,7 +115,6 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 			.height(ITEM_HEIGHT as u16)
 	});
 
-	let bar = " █ ";
 	let longest_item_lens = constraint_len_calculator(&app.items);
 	let table = Table::new(
 		rows,
@@ -130,7 +128,7 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	.row_highlight_style(selected_row_style)
 	.column_highlight_style(selected_col_style)
 	.cell_highlight_style(selected_cell_style)
-	.highlight_symbol(Text::from(vec!["".into(), bar.into(), "".into()]))
+	.highlight_symbol(Text::from(vec!["".into(), BAR_SYMBOL.into(), "".into()]))
 	.bg(app.colors.buffer_bg)
 	.highlight_spacing(HighlightSpacing::Always);
 
