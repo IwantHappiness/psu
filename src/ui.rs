@@ -1,3 +1,5 @@
+// #![allow(unused)]
+
 use super::app::{App, CurrentScreen, Data, ITEM_HEIGHT, InputMode};
 use ratatui::{
 	Frame,
@@ -51,12 +53,13 @@ impl TableColors {
 }
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
-	let vertical = Layout::vertical([Constraint::Min(5), Constraint::Length(4)]);
+	let vertical = Layout::vertical([Constraint::Max(3), Constraint::Min(5), Constraint::Length(4)]);
 	let rects = vertical.split(frame.area());
 
-	render_table(app, frame, rects[0]);
-	render_scrollbar(app, frame, rects[0]);
-	render_footer(app, frame, rects[1]);
+	render_header(app, frame, rects[0]);
+	render_table(app, frame, rects[1]);
+	render_scrollbar(app, frame, rects[1]);
+	render_footer(app, frame, rects[2]);
 
 	if app.current_screen == CurrentScreen::Popup {
 		render_popup(app, frame);
@@ -83,19 +86,28 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 		.split(popup_layout[1])[1] // Return the middle chunk
 }
 
-fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
-	let header_style = Style::default().fg(app.colors.header_fg).bg(app.colors.header_bg);
-	let header = ["Login", "Password", "Service"]
-		.into_iter()
-		.map(Cell::from)
-		.collect::<Row>()
-		.style(header_style)
-		.height(1);
+fn render_header(app: &App, frame: &mut Frame, area: Rect) {
+	let block = Block::default().borders(Borders::ALL).bg(app.colors.header_bg);
+	let header_style = Style::default().fg(app.colors.header_fg);
+	let chunks = Layout::default()
+		.direction(Direction::Horizontal)
+		.constraints([
+			Constraint::Ratio(1, 3),
+			Constraint::Ratio(1, 3),
+			Constraint::Ratio(1, 3),
+		])
+		.split(block.inner(area));
 
+	frame.render_widget(block, area);
+	frame.render_widget(Paragraph::new(" Login").style(header_style), chunks[0]);
+	frame.render_widget(Paragraph::new(" Password").style(header_style), chunks[1]);
+	frame.render_widget(Paragraph::new(" Service").style(header_style), chunks[2]);
+}
+
+fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	let selected_row_style = Style::default()
 		.add_modifier(Modifier::REVERSED)
 		.fg(app.colors.selected_row_style_fg);
-
 	let selected_col_style = Style::default().fg(app.colors.selected_column_style_fg);
 	let selected_cell_style = Style::default()
 		.add_modifier(Modifier::REVERSED)
@@ -124,7 +136,6 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 			Constraint::Min(longest_item_lens.2),
 		],
 	)
-	.header(header)
 	.row_highlight_style(selected_row_style)
 	.column_highlight_style(selected_col_style)
 	.cell_highlight_style(selected_cell_style)
