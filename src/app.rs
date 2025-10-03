@@ -176,6 +176,7 @@ impl App {
 		};
 	}
 
+	#[inline]
 	pub fn modify(&mut self) {
 		if let Some(index) = self.state.selected() {
 			let data = &self.items[index];
