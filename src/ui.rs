@@ -87,7 +87,9 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 }
 
 fn render_header(app: &App, frame: &mut Frame, area: Rect) {
-	let block = Block::default().borders(Borders::ALL).bg(app.colors.header_bg);
+	let block = Block::default()
+		.borders(Borders::TOP | Borders::BOTTOM)
+		.bg(app.colors.header_bg);
 	let header_style = Style::default().fg(app.colors.header_fg);
 	let chunks = Layout::default()
 		.direction(Direction::Horizontal)
@@ -99,9 +101,9 @@ fn render_header(app: &App, frame: &mut Frame, area: Rect) {
 		.split(block.inner(area));
 
 	frame.render_widget(block, area);
-	frame.render_widget(Paragraph::new(" Login").style(header_style), chunks[0]);
-	frame.render_widget(Paragraph::new(" Password").style(header_style), chunks[1]);
-	frame.render_widget(Paragraph::new(" Service").style(header_style), chunks[2]);
+	frame.render_widget(Paragraph::new("  Login").style(header_style), chunks[0]);
+	frame.render_widget(Paragraph::new("  Password").style(header_style), chunks[1]);
+	frame.render_widget(Paragraph::new("  Service").style(header_style), chunks[2]);
 }
 
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
