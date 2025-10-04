@@ -1,3 +1,4 @@
+use super::config::{Config, read_config};
 use super::ui::TableColors;
 use anyhow::{Context, Result};
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -16,8 +17,8 @@ use std::{
 };
 use tui_input::Input;
 
-const PASSWORD_FILE: &str = "psu.csv";
-const TEMP_FILE: &str = "psu.csv.temp";
+pub const PASSWORD_FILE: &str = "psu.csv";
+pub const TEMP_FILE: &str = "psu.csv.temp";
 pub const ITEM_HEIGHT: usize = 3;
 
 #[derive(Debug, Default, PartialEq)]
@@ -37,6 +38,7 @@ pub enum InputMode {
 
 #[derive(Default)]
 pub struct App {
+	pub config: Config,
 	// User form
 	pub input: UserInput,
 	// Vector with passwords
@@ -57,17 +59,19 @@ pub struct App {
 
 impl App {
 	pub fn new() -> Self {
-		let data = App::read(PASSWORD_FILE).unwrap_or_default();
+		let config = read_config().unwrap_or_default();
+		let items = App::read(config.path.join(PASSWORD_FILE)).unwrap_or_default();
 
 		Self {
+			config,
 			input: UserInput::default(),
 			input_mode: InputMode::default(),
 			current_screen: CurrentScreen::default(),
 			state: TableState::default().with_selected(0),
 			colors: TableColors::new(&tailwind::GRAY),
-			scroll_state: ScrollbarState::new(data.len().saturating_sub(ITEM_HEIGHT)),
+			scroll_state: ScrollbarState::new(items.len().saturating_sub(ITEM_HEIGHT)),
 			is_modify: false,
-			items: data,
+			items,
 		}
 	}
 
