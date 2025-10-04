@@ -1,6 +1,5 @@
 use app::App;
 use color_eyre::Result;
-use config::Config;
 use crossterm::{
 	event::{DisableMouseCapture, EnableMouseCapture},
 	execute,
@@ -16,11 +15,7 @@ mod run;
 mod ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let conf = Config::new();
-
-	if let Err(e) = conf.generate_conf() {
-		eprintln!("Error: {e}");
-	}
+	let mut app = App::new();
 
 	enable_raw_mode()?;
 	let mut stderr = io::stderr();
@@ -28,7 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 	let backend = CrosstermBackend::new(stderr);
 	let mut terminal = Terminal::new(backend)?;
-	let res = run_app(&mut terminal, &mut App::new());
+	let res = run_app(&mut terminal, &mut app);
 
 	disable_raw_mode()?;
 	execute!(terminal.backend_mut(), LeaveAlternateScreen, DisableMouseCapture)?;
