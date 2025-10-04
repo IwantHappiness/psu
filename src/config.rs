@@ -41,6 +41,16 @@ impl Config {
 }
 
 fn get_app_data_dir() -> Option<PathBuf> {
-	let project_dirs = ProjectDirs::from("com", "", APP_NAME)?;
-	Some(directories::ProjectDirs::config_dir(&project_dirs).to_path_buf())
+	Some(ProjectDirs::from("com", "", APP_NAME)?.config_dir().to_path_buf())
+}
+
+pub fn read_config() -> Result<Config, Error> {
+	let conf = get_app_data_dir().unwrap().join(CONFIG);
+
+	if !conf.exists() {
+		Config::gen_config()?;
+	}
+
+	let s = fs::read_to_string(conf)?;
+	Ok(toml::from_str::<Config>(&s)?)
 }
