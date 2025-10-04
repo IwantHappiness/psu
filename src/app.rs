@@ -149,8 +149,11 @@ impl App {
 
 	// Write password to PASSWORD_FILE
 	pub fn write(&mut self) -> Result<()> {
-		create_csv_file(TEMP_FILE)?;
-		let mut wtr = get_writer(TEMP_FILE)?;
+		let final_path = self.config.path.join(PASSWORD_FILE);
+		let temp_path = self.config.path.join(TEMP_FILE);
+
+		create_csv_file(&temp_path)?;
+		let mut wtr = get_writer(&temp_path)?;
 
 		for (index, password) in self.items.iter_mut().enumerate() {
 			if password.id != index as u32 {
@@ -161,7 +164,7 @@ impl App {
 		}
 		wtr.flush()?;
 
-		fs::rename(TEMP_FILE, PASSWORD_FILE)?;
+		fs::rename(temp_path, final_path)?;
 		Ok(())
 	}
 
