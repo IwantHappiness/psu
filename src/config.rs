@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 
 const CONFIG: &str = "config.toml";
+const APP_NAME: &str = "psu";
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
@@ -14,7 +15,7 @@ pub struct Config {
 struct Fields {
 	input: String,
 	login: String,
-	servise: String,
+	service: String,
 }
 
 impl Config {
@@ -24,7 +25,7 @@ impl Config {
 		}
 	}
 
-	pub fn generate_conf(self) -> Result<()> {
+	pub fn gen_config(&self) -> Result<()> {
 		let dir = get_app_data_dir().context("Failed to obtain config directory.")?;
 		let conf = self.parse_config().context("Failed to parse configuration.")?;
 
@@ -33,12 +34,12 @@ impl Config {
 		Ok(())
 	}
 
-	fn parse_config(self) -> Result<String, Error> {
-		Ok(toml::to_string(&self)?)
+	fn parse_config(&self) -> Result<String, Error> {
+		Ok(toml::to_string(self)?)
 	}
 }
 
 fn get_app_data_dir() -> Option<PathBuf> {
-	let project_dirs = ProjectDirs::from("com", "", "psu")?;
+	let project_dirs = ProjectDirs::from("com", "", APP_NAME)?;
 	Some(directories::ProjectDirs::config_dir(&project_dirs).to_path_buf())
 }
