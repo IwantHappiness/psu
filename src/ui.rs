@@ -167,7 +167,7 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 		.title("Form")
 		.borders(Borders::ALL)
 		.style(Style::default())
-		.bg(Color::Black);
+		.bg(Color::Reset);
 	let area = centered_rect(60, 37, frame.area());
 
 	frame.render_widget(Clear, area);
