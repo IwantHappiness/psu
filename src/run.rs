@@ -25,12 +25,13 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
 					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
 					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
-					KeyCode::Char('d') | KeyCode::Char('D') => {
+					KeyCode::Char('d' | 'D') => {
 						app.delete();
 						app.write()?;
 					}
-					KeyCode::Char('n') | KeyCode::Char('N') => app.current_screen = CurrentScreen::Popup,
-					KeyCode::Char('m') | KeyCode::Char('M') => {
+					KeyCode::Char('?') => app.current_screen = CurrentScreen::Help,
+					KeyCode::Char('n' | 'N') => app.current_screen = CurrentScreen::Popup,
+					KeyCode::Char('m' | 'M') => {
 						app.modify();
 						app.current_screen = CurrentScreen::Popup;
 					}
@@ -57,7 +58,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 						app.write()?;
 						app.input.reset_data();
 						app.input_mode = InputMode::default();
-						app.current_screen = CurrentScreen::default();
+						app.current_screen = CurrentScreen::Main;
 					}
 					// Switch fields
 					KeyCode::Down | KeyCode::Tab => app.next_input_mode(),
@@ -70,6 +71,10 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 							InputMode::Service => app.input.service.handle_event(&event),
 						};
 					}
+				},
+				CurrentScreen::Help => match key.code {
+					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
+					_ => {}
 				},
 			}
 		}

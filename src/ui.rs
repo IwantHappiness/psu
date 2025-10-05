@@ -16,9 +16,24 @@ use unicode_width::UnicodeWidthStr;
 const BAR_SYMBOL: &str = " █ ";
 const SCROLLBAR_BEGIN_SYMBOL: &str = "▲";
 const SCROLLBAR_END_SYMBOL: &str = "▼";
-const INFO_TEXT: [&str; 2] = [
-	"(Esc) quit | (↑) move up | (↓) move down | (←) move left | (→) move right",
-	"(N) new password | (Enter) send password | (D) delete password | (M) modify password",
+const INFO_TEXT: [&str; 1] =
+	["(Esc) quit | (n) new password | (Enter) send password | (d) delete password | (m) modify password | (?) help"];
+const HELP_TEXT: [&str; 15] = [
+	"--- Global --- ",
+	"(Esc) - quit",
+	"(n) - new password",
+	"(d) - delete password",
+	"(m) - modify password",
+	"(Enter) - send password",
+	"(c) - copy column",
+	"(p) - copy password",
+	"(P) - copy row",
+	" ",
+	"--- Navigation ---",
+	"(↑, k) - move up ",
+	"(↓, j) - move down",
+	"(←, h) - move left ",
+	"(→, l) - move right",
 ];
 
 #[derive(Default)]
@@ -53,7 +68,7 @@ impl TableColors {
 }
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
-	let vertical = Layout::vertical([Constraint::Max(3), Constraint::Min(5), Constraint::Length(4)]);
+	let vertical = Layout::vertical([Constraint::Max(3), Constraint::Min(5), Constraint::Max(3)]);
 	let rects = vertical.split(frame.area());
 
 	render_header(app, frame, rects[0]);
@@ -61,9 +76,22 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 	render_scrollbar(app, frame, rects[1]);
 	render_footer(app, frame, rects[2]);
 
-	if app.current_screen == CurrentScreen::Popup {
-		render_popup(app, frame);
+	match app.current_screen {
+		CurrentScreen::Popup => render_popup(app, frame),
+		CurrentScreen::Help => render_help(frame),
+		_ => {}
 	}
+}
+
+fn render_help(frame: &mut Frame) {
+	let area = centered_rect(40, 40, frame.area());
+	let block = Block::default().title("Help").bg(Color::Reset).borders(Borders::ALL);
+	let paragraph = Paragraph::new(Text::from_iter(HELP_TEXT))
+		.block(block.clone())
+		.alignment(ratatui::layout::Alignment::Center);
+
+	frame.render_widget(Clear, area);
+	frame.render_widget(paragraph, area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {

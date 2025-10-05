@@ -26,6 +26,7 @@ pub enum CurrentScreen {
 	#[default]
 	Main,
 	Popup,
+	Help,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -172,7 +173,7 @@ impl App {
 		if let Ok(mut wtr) = csv::Reader::from_path(path) {
 			let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
 			return Some(vec);
-		};
+		}
 
 		None
 	}
@@ -180,7 +181,7 @@ impl App {
 	pub fn delete(&mut self) {
 		if let Some(index) = self.state.selected() {
 			self.items.remove(index);
-		};
+		}
 	}
 
 	#[inline]
@@ -221,7 +222,6 @@ impl App {
 
 			let data = match self.state.selected_column() {
 				Some(0) => password.login(),
-				Some(1) => password.password(),
 				Some(2) => password.service(),
 				_ => password.password(),
 			};
