@@ -192,7 +192,29 @@ impl App {
 		self.is_modify = true;
 	}
 
-	pub fn clip(&self) -> anyhow::Result<(), Box<dyn Error>> {
+	pub fn clip_row(&self) -> anyhow::Result<(), Box<dyn Error>> {
+		if let Some(index) = self.state.selected() {
+			let mut ctx = ClipboardContext::new()?;
+			let password = self.items.get(index).context("No get Password.")?;
+
+			ctx.set_contents(password.to_string())?;
+		}
+
+		Ok(())
+	}
+
+	pub fn clip_password(&self) -> anyhow::Result<(), Box<dyn Error>> {
+		if let Some(index) = self.state.selected() {
+			let mut ctx = ClipboardContext::new()?;
+			let password = self.items.get(index).context("No get Password.")?;
+
+			ctx.set_contents(password.password().into())?;
+		}
+
+		Ok(())
+	}
+
+	pub fn clip_column(&self) -> anyhow::Result<(), Box<dyn Error>> {
 		if let Some(index) = self.state.selected() {
 			let mut ctx = ClipboardContext::new()?;
 			let password = self.items.get(index).context("No get Password.")?;
@@ -205,17 +227,6 @@ impl App {
 			};
 
 			ctx.set_contents(data.into())?;
-		}
-
-		Ok(())
-	}
-
-	pub fn clip_all(&self) -> anyhow::Result<(), Box<dyn Error>> {
-		if let Some(index) = self.state.selected() {
-			let mut ctx = ClipboardContext::new()?;
-			let password = self.items.get(index).context("No get Password.")?;
-
-			ctx.set_contents(password.to_string())?;
 		}
 
 		Ok(())

@@ -18,8 +18,9 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
 					KeyCode::Esc => return Ok(true),
-					KeyCode::Char('p') => app.clip()?,
-					KeyCode::Char('P') => app.clip_all()?,
+					KeyCode::Char('P') => app.clip_row()?,
+					KeyCode::Char('c') => app.clip_column()?,
+					KeyCode::Char('p') => app.clip_password()?,
 					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
 					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
