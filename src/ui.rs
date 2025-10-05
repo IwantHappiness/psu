@@ -183,7 +183,7 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 	let mut password_block = Block::default().title("Password").borders(Borders::ALL);
 	let mut service_block = Block::default().title("Service").borders(Borders::ALL);
 
-	let active_style = Style::default().fg(Color::Red);
+	let active_style = Style::default().fg(Color::Blue);
 
 	match app.input_mode {
 		InputMode::Login => login_block = login_block.style(active_style),
