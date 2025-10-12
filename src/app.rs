@@ -1,4 +1,4 @@
-use super::config::{Config, read_config};
+use super::config::Config;
 use super::ui::TableColors;
 use anyhow::{Context, Result};
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -60,7 +60,10 @@ pub struct App {
 
 impl App {
 	pub fn new() -> Self {
-		let config = read_config().unwrap_or_default();
+		let config = Config::new().unwrap_or_else(|_| {
+			Config::gen_config().unwrap();
+			Config::new().unwrap_or_default()
+		});
 		let items = App::read(config.path.join(PASSWORD_FILE)).unwrap_or_default();
 
 		Self {

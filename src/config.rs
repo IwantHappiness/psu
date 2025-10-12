@@ -1,12 +1,13 @@
-#![allow(unused)]
-use anyhow::{Context, Error, Result};
+// #![allow(unused)]
+use anyhow::{Context, Result};
+use config::{Config as ConfigBuilder, ConfigError, File, FileFormat};
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf};
 
-const CONFIG: &str = "config.toml";
+const CONFIG_FILE: &str = "config.toml";
 const APP_NAME: &str = "psu";
 
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
 	pub path: PathBuf,
 	pub fields: Fields,
@@ -20,11 +21,18 @@ pub struct Fields {
 }
 
 impl Config {
-	pub fn new() -> Self {
-		Self {
-			path: dirs::home_dir().unwrap_or_default(),
-			..Default::default()
-		}
+	pub fn new() -> Result<Self, ConfigError> {
+		let mut builder = ConfigBuilder::builder();
+		builder = builder.add_source(
+			File::from(get_app_data_dir().unwrap().join(CONFIG_FILE))
+				.format(FileFormat::Toml)
+				.required(false),
+		);
+
+		builder.build()?.try_deserialize().map(|mut config: Config| {
+			config.replace_tilde();
+			config
+		})
 	}
 
 	pub fn gen_config() -> Result<()> {
@@ -34,10 +42,25 @@ impl Config {
 			fs::create_dir_all(&dir).context("Failed create config dirs")?;
 		}
 
-		let conf = toml::to_string_pretty(&Config::new()).context("Failed to parse configuration.")?;
-		fs::write(dir.join(CONFIG), conf).context("Failed write config.")?;
+		let conf = toml::to_string_pretty(&Config::default()).context("Failed to parse configuration.")?;
+		fs::write(dir.join(CONFIG_FILE), conf).context("Failed write config.")?;
 
 		Ok(())
+	}
+
+	fn replace_tilde(&mut self) {
+		if let Some(home) = dirs::home_dir() {
+			self.path = self.path.to_string_lossy().replace("~", &home.to_string_lossy()).into();
+		}
+	}
+}
+
+impl Default for Config {
+	fn default() -> Self {
+		Self {
+			path: dirs::home_dir().unwrap_or_default(),
+			fields: Default::default(),
+		}
 	}
 }
 
@@ -45,20 +68,20 @@ fn get_app_data_dir() -> Option<PathBuf> {
 	Some(dirs::config_dir()?.join(APP_NAME))
 }
 
-pub fn read_config() -> Result<Config, Error> {
-	let path = get_app_data_dir().unwrap().join(CONFIG);
+#[cfg(test)]
+mod test {
+	use super::Config;
 
-	if !path.exists() {
-		Config::gen_config()?;
+	#[test]
+	fn rep_tilde() {
+		if let Some(home) = dirs::home_dir() {
+			let mut conf = Config {
+				path: "~/Downloads".into(),
+				..Default::default()
+			};
+			conf.replace_tilde();
+			// println!("{}, {}", conf.path.display(), home.join("Downloads").display());
+			assert_eq!(conf.path, home.join("Downloads"))
+		}
 	}
-
-	let mut config = toml::from_str::<Config>(&fs::read_to_string(path)?)?;
-	config.path = config
-		.path
-		.as_os_str()
-		.to_string_lossy()
-		.replace("~/", &dirs::home_dir().unwrap().to_string_lossy())
-		.into();
-
-	Ok(config)
 }
