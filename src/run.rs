@@ -1,3 +1,4 @@
+// #![warn(clippy::all, clippy::pedantic)]
 use super::app::{App, CurrentScreen, Data, InputMode};
 use super::ui::ui;
 use crossterm::event::{self, Event, KeyCode};
@@ -72,10 +73,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 						};
 					}
 				},
-				CurrentScreen::Help => match key.code {
-					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
-					_ => {}
-				},
+				CurrentScreen::Help => {
+					if key.code == KeyCode::Esc {
+						app.current_screen = CurrentScreen::Main;
+					}
+				}
 			}
 		}
 	}
