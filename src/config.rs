@@ -1,4 +1,5 @@
 // #![allow(unused)]
+// #![warn(clippy::all, clippy::pedantic)]
 use anyhow::{Context, Result};
 use config::{Config as ConfigBuilder, ConfigError, File, FileFormat};
 use serde::{Deserialize, Serialize};
@@ -50,7 +51,7 @@ impl Config {
 
 	fn replace_tilde(&mut self) {
 		if let Some(home) = dirs::home_dir() {
-			self.path = self.path.to_string_lossy().replace("~", &home.to_string_lossy()).into();
+			self.path = self.path.to_string_lossy().replace('~', &home.to_string_lossy()).into();
 		}
 	}
 }

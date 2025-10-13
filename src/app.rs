@@ -1,3 +1,4 @@
+// #![warn(clippy::all, clippy::pedantic)]
 use super::config::Config;
 use super::ui::TableColors;
 use anyhow::{Context, Result};
@@ -32,9 +33,9 @@ pub enum CurrentScreen {
 #[derive(Debug, Default, PartialEq)]
 pub enum InputMode {
 	#[default]
+	Service,
 	Login,
 	Password,
-	Service,
 }
 
 #[derive(Default)]
@@ -134,7 +135,7 @@ impl App {
 	}
 
 	pub fn add_password(&mut self) {
-		let (login, password, service) = self.input.ref_array().into();
+		let (service, login, password) = self.input.ref_array().into();
 
 		if self.is_modify {
 			if let Some(index) = self.state.selected() {
@@ -146,7 +147,7 @@ impl App {
 			}
 		} else {
 			let new_id = self.items.len() as u32;
-			let data = Password::new(new_id, login, password, service);
+			let data = Password::new(new_id, service, login, password);
 			self.items.push(data);
 		}
 	}
@@ -224,8 +225,8 @@ impl App {
 			let password = self.items.get(index).context("No get Password.")?;
 
 			let data = match self.state.selected_column() {
-				Some(0) => password.login(),
-				Some(2) => password.service(),
+				Some(1) => password.login(),
+				Some(0) => password.service(),
 				_ => password.password(),
 			};
 
@@ -245,7 +246,7 @@ fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
 
 fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 	let mut wtr = get_writer(path)?;
-	wtr.write_record(["Id", "Login", "Password", "Service"])?;
+	wtr.write_record(["Id", "Service", "Login", "Password"])?;
 	wtr.flush()?;
 
 	Ok(())
@@ -261,9 +262,9 @@ pub trait Data {
 
 #[derive(Clone, Debug, Default)]
 pub struct UserInput {
+	pub service: Input,
 	pub login: Input,
 	pub password: Input,
-	pub service: Input,
 }
 
 impl UserInput {
@@ -274,14 +275,14 @@ impl UserInput {
 	}
 
 	pub fn ref_array(&self) -> [&str; 3] {
-		[self.login(), self.password(), self.service()]
+		[self.service(), self.login(), self.password()]
 	}
 
-	pub fn from_array(value: &[String; 3]) -> Self {
+	pub fn from_array<T: AsRef<str>>(value: &[T; 3]) -> Self {
 		Self {
-			login: value[0].as_str().into(),
-			password: value[1].as_str().into(),
-			service: value[2].as_str().into(),
+			service: value[0].as_ref().into(),
+			login: value[1].as_ref().into(),
+			password: value[2].as_ref().into(),
 		}
 	}
 }
@@ -304,18 +305,18 @@ impl Data for UserInput {
 #[serde(rename_all = "PascalCase")]
 pub struct Password {
 	pub id: u32,
+	pub service: String,
 	pub login: String,
 	pub password: String,
-	pub service: String,
 }
 
 impl Password {
-	pub fn new<T: AsRef<str>>(id: u32, login: T, password: T, service: T) -> Self {
+	pub fn new<T: AsRef<str>>(id: u32, service: T, login: T, password: T) -> Self {
 		Self {
 			id,
+			service: service.as_ref().into(),
 			login: login.as_ref().into(),
 			password: password.as_ref().into(),
-			service: service.as_ref().into(),
 		}
 	}
 
@@ -326,16 +327,16 @@ impl Password {
 	pub fn ref_array(&self) -> [String; 4] {
 		[
 			self.id(),
+			self.service().into(),
 			self.login().into(),
 			self.password().into(),
-			self.service().into(),
 		]
 	}
 }
 
 impl Display for Password {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}   {}   {}", self.login, self.password, self.service)
+		write!(f, "{}   {}   {}", self.service, self.login, self.password,)
 	}
 }
 
@@ -356,9 +357,28 @@ impl<T: Borrow<Password>> From<T> for UserInput {
 	fn from(value: T) -> Self {
 		let value = value.borrow();
 		Self {
+			service: value.service().into(),
 			login: value.login().into(),
 			password: value.password().into(),
-			service: value.service().into(),
 		}
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use crate::app::Password;
+
+	use super::UserInput;
+
+	#[test]
+	fn user_input_ref_array() {
+		let user_input = UserInput::from_array(&["a", "b", "c"]);
+		assert_eq!(user_input.ref_array(), ["a", "b", "c"])
+	}
+
+	#[test]
+	fn password_ref_array() {
+		let user_input = Password::new(0, "a", "b", "c");
+		assert_eq!(user_input.ref_array(), ["0", "a", "b", "c"])
 	}
 }

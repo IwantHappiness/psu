@@ -1,4 +1,5 @@
 // #![allow(unused)]
+// #![warn(clippy::all, clippy::pedantic)]
 
 use super::app::{App, CurrentScreen, Data, ITEM_HEIGHT, InputMode};
 use ratatui::{
@@ -129,9 +130,9 @@ fn render_header(app: &App, frame: &mut Frame, area: Rect) {
 		.split(block.inner(area));
 
 	frame.render_widget(block, area);
-	frame.render_widget(Paragraph::new("  Login").style(header_style), chunks[0]);
-	frame.render_widget(Paragraph::new("  Password").style(header_style), chunks[1]);
-	frame.render_widget(Paragraph::new("  Service").style(header_style), chunks[2]);
+	frame.render_widget(Paragraph::new("  Service").style(header_style), chunks[0]);
+	frame.render_widget(Paragraph::new("  Login").style(header_style), chunks[1]);
+	frame.render_widget(Paragraph::new("  Password").style(header_style), chunks[2]);
 }
 
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
@@ -207,35 +208,35 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 		.constraints([Constraint::Fill(1), Constraint::Fill(1), Constraint::Fill(1)])
 		.split(area);
 
+	let mut service_block = Block::default().title("Service").borders(Borders::ALL);
 	let mut login_block = Block::default().title("Login or Email").borders(Borders::ALL);
 	let mut password_block = Block::default().title("Password").borders(Borders::ALL);
-	let mut service_block = Block::default().title("Service").borders(Borders::ALL);
 
 	let active_style = Style::default().fg(Color::Blue);
 
 	match app.input_mode {
+		InputMode::Service => service_block = service_block.style(active_style),
 		InputMode::Login => login_block = login_block.style(active_style),
 		InputMode::Password => password_block = password_block.style(active_style),
-		InputMode::Service => service_block = service_block.style(active_style),
 	};
-
-	let login_text = Paragraph::new(app.input.login()).fg(Color::White).block(login_block);
-	frame.render_widget(login_text, popup_chunks[0]);
-
-	let password = Paragraph::new(app.input.password())
-		.fg(Color::White)
-		.block(password_block);
-	frame.render_widget(password, popup_chunks[1]);
 
 	let service_text = Paragraph::new(app.input.service())
 		.fg(Color::White)
 		.block(service_block);
-	frame.render_widget(service_text, popup_chunks[2]);
+	frame.render_widget(service_text, popup_chunks[0]);
+
+	let login_text = Paragraph::new(app.input.login()).fg(Color::White).block(login_block);
+	frame.render_widget(login_text, popup_chunks[1]);
+
+	let password = Paragraph::new(app.input.password())
+		.fg(Color::White)
+		.block(password_block);
+	frame.render_widget(password, popup_chunks[2]);
 
 	let (chunk, text) = match app.input_mode {
-		InputMode::Login => (popup_chunks[0], &app.input.login),
-		InputMode::Password => (popup_chunks[1], &app.input.password),
-		InputMode::Service => (popup_chunks[2], &app.input.service),
+		InputMode::Service => (popup_chunks[0], &app.input.service),
+		InputMode::Login => (popup_chunks[1], &app.input.login),
+		InputMode::Password => (popup_chunks[2], &app.input.password),
 	};
 
 	let width = chunk.width.max(3) - 3;
@@ -257,7 +258,14 @@ fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
 }
 
 fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
-	let name_len = items
+	let service_len = items
+		.iter()
+		.map(Data::service)
+		.map(UnicodeWidthStr::width)
+		.max()
+		.unwrap_or(0) as u16;
+
+	let login_len = items
 		.iter()
 		.map(Data::login)
 		.map(UnicodeWidthStr::width)
@@ -271,12 +279,5 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 		.max()
 		.unwrap_or(0) as u16;
 
-	let service_len = items
-		.iter()
-		.map(Data::service)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.unwrap_or(0) as u16;
-
-	(name_len, password_len, service_len)
+	(service_len, login_len, password_len)
 }
