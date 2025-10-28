@@ -25,7 +25,7 @@ impl Config {
 	pub fn new() -> Result<Self, ConfigError> {
 		let mut builder = ConfigBuilder::builder();
 		builder = builder.add_source(
-			File::from(get_app_data_dir().unwrap().join(CONFIG_FILE))
+			File::from(Self::get_app_data_dir().unwrap().join(CONFIG_FILE))
 				.format(FileFormat::Toml)
 				.required(false),
 		);
@@ -37,7 +37,7 @@ impl Config {
 	}
 
 	pub fn gen_config() -> Result<()> {
-		let dir = get_app_data_dir().context("Failed to obtain config directory.")?;
+		let dir = Self::get_app_data_dir().context("Failed to obtain config directory.")?;
 
 		if !dir.exists() {
 			fs::create_dir_all(&dir).context("Failed create config dirs")?;
@@ -54,23 +54,23 @@ impl Config {
 			self.path = self.path.to_string_lossy().replace('~', &home.to_string_lossy()).into();
 		}
 	}
+
+	fn get_app_data_dir() -> Option<PathBuf> {
+		Some(dirs::config_dir()?.join(APP_NAME))
+	}
 }
 
 impl Default for Config {
 	fn default() -> Self {
 		Self {
 			path: dirs::home_dir().unwrap_or_default(),
-			fields: Default::default(),
+			fields: Fields::default(),
 		}
 	}
 }
 
-fn get_app_data_dir() -> Option<PathBuf> {
-	Some(dirs::config_dir()?.join(APP_NAME))
-}
-
 #[cfg(test)]
-mod test {
+mod test_config {
 	use super::Config;
 
 	#[test]

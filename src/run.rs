@@ -50,8 +50,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 						// Skip print if fields are empty
 						if app.input.login().is_empty()
 							&& app.input.password().is_empty()
-							&& app.input.service().is_empty()
-						{
+							&& app.input.service().is_empty()						{
 							continue;
 						}
 

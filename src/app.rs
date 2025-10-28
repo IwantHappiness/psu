@@ -1,6 +1,6 @@
 // #![warn(clippy::all, clippy::pedantic)]
-use super::config::Config;
-use super::ui::TableColors;
+use crate::conf::Config;
+use crate::ui::TableColors;
 use anyhow::{Context, Result};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use csv::Writer;
@@ -278,7 +278,9 @@ impl UserInput {
 		[self.service(), self.login(), self.password()]
 	}
 
-	pub fn from_array<T: AsRef<str>>(value: &[T; 3]) -> Self {
+	#[allow(unused)]
+	pub fn from_array<T: AsRef<str>>(value: impl Borrow<[T; 3]>) -> Self {
+		let value = value.borrow();
 		Self {
 			service: value[0].as_ref().into(),
 			login: value[1].as_ref().into(),
@@ -365,14 +367,14 @@ impl<T: Borrow<Password>> From<T> for UserInput {
 }
 
 #[cfg(test)]
-mod test {
+mod test_app {
 	use crate::app::Password;
 
 	use super::UserInput;
 
 	#[test]
 	fn user_input_ref_array() {
-		let user_input = UserInput::from_array(&["a", "b", "c"]);
+		let user_input = UserInput::from_array(["a", "b", "c"]);
 		assert_eq!(user_input.ref_array(), ["a", "b", "c"])
 	}
 
@@ -380,5 +382,12 @@ mod test {
 	fn password_ref_array() {
 		let user_input = Password::new(0, "a", "b", "c");
 		assert_eq!(user_input.ref_array(), ["0", "a", "b", "c"])
+	}
+
+	#[test]
+	fn reset_input() {
+		let mut user_input = UserInput::from_array(["a", "b", "c"]);
+		user_input.reset_data();
+		assert_eq!(user_input.ref_array(), ["", "", ""])
 	}
 }

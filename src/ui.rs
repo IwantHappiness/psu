@@ -218,7 +218,7 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 		InputMode::Service => service_block = service_block.style(active_style),
 		InputMode::Login => login_block = login_block.style(active_style),
 		InputMode::Password => password_block = password_block.style(active_style),
-	};
+	}
 
 	let service_text = Paragraph::new(app.input.service())
 		.fg(Color::White)

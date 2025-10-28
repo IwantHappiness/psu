@@ -1,3 +1,4 @@
+// #![warn(clippy::all, clippy::pedantic)]
 use app::App;
 use color_eyre::Result;
 use crossterm::{
@@ -10,7 +11,7 @@ use run::run_app;
 use std::{error::Error, io};
 
 mod app;
-mod config;
+mod conf;
 mod run;
 mod ui;
 
@@ -30,7 +31,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 	terminal.show_cursor()?;
 
 	if let Err(err) = res {
-		eprintln!("Error: {:?}", err);
+		eprintln!("Error: {err:?}");
 	}
 
 	Ok(())
