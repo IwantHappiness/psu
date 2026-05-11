@@ -1,11 +1,13 @@
-use super::app::{App, CurrentScreen, Data, InputMode};
-use super::ui::ui;
+use super::{
+	app::{App, CurrentScreen, Data, InputMode},
+	ui::ui,
+};
 use crossterm::event::{self, Event, KeyCode};
 use ratatui::{Terminal, prelude::Backend};
 use std::error::Error;
 use tui_input::backend::crossterm::EventHandler;
 
-pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Result<bool, Box<dyn Error>> {
+pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow::Result<(), Box<dyn Error>> {
 	loop {
 		terminal.draw(|frame| ui(frame, app))?;
 
@@ -17,7 +19,7 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> anyhow:
 
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
-					KeyCode::Esc => return Ok(true),
+					KeyCode::Esc => return Ok(()),
 					KeyCode::Char('P') => app.clip_row()?,
 					KeyCode::Char('c') => app.clip_column()?,
 					KeyCode::Char('p') => app.clip_password()?,

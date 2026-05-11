@@ -1,6 +1,3 @@
-// #![allow(unused)]
-// #![warn(clippy::all, clippy::pedantic)]
-
 use super::app::{App, CurrentScreen, Data, ITEM_HEIGHT, InputMode};
 use ratatui::{
 	Frame,
@@ -80,7 +77,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 	match app.current_screen {
 		CurrentScreen::Popup => render_popup(app, frame),
 		CurrentScreen::Help => render_help(frame),
-		_ => {}
+		CurrentScreen::Main => {}
 	}
 }
 
@@ -257,6 +254,8 @@ fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
 	frame.render_widget(info_footer, area);
 }
 
+fn render_error() {}
+
 fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 	let service_len = items
 		.iter()
@@ -281,3 +280,6 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 
 	(service_len, login_len, password_len)
 }
+
+#[cfg(test)]
+mod iu_test {}

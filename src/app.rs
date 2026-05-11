@@ -1,6 +1,4 @@
-// #![warn(clippy::all, clippy::pedantic)]
-use crate::conf::Config;
-use crate::ui::TableColors;
+use crate::{conf::Config, ui::TableColors};
 use anyhow::{Context, Result};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use csv::Writer;
@@ -338,7 +336,7 @@ impl Password {
 
 impl Display for Password {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}   {}   {}", self.service, self.login, self.password,)
+		write!(f, "{}   {}   {}", self.service, self.login, self.password)
 	}
 }
 

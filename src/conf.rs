@@ -1,5 +1,3 @@
-// #![allow(unused)]
-// #![warn(clippy::all, clippy::pedantic)]
 use anyhow::{Context, Result};
 use config::{Config as ConfigBuilder, ConfigError, File, FileFormat};
 use serde::{Deserialize, Serialize};
@@ -23,13 +21,12 @@ pub struct Fields {
 
 impl Config {
 	pub fn new() -> Result<Self, ConfigError> {
-		let mut builder = ConfigBuilder::builder();
-		builder = builder.add_source(
-			File::from(Self::get_app_data_dir().unwrap().join(CONFIG_FILE))
-				.format(FileFormat::Toml)
-				.required(false),
-		);
+		let Some(dir) = Self::get_app_data_dir() else {
+			return Ok(Config::default());
+		};
 
+		let mut builder = ConfigBuilder::builder();
+		builder = builder.add_source(File::from(dir.join(CONFIG_FILE)).format(FileFormat::Toml));
 		builder.build()?.try_deserialize().map(|mut config: Config| {
 			config.replace_tilde();
 			config
