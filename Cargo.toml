@@ -14,14 +14,14 @@ strip = true
 
 [dependencies]
 csv = "1.4.0"
-dirs = "6.0.0"
-toml = "=1.1.0"
-anyhow = "1.0.102"
+dirs = "7.0.0"
+toml = "1.1.5"
+anyhow = "1.0.104"
 clipboard = "0.5.0"
 color-eyre = "0.6.5"
 crossterm = "0.29.0"
 unicode-width = "0.2.2"
-ratatui = { version = "0.30.0", features = ["macros"] }
-serde = { version = "1.0.228", features = ["derive"] }
-tui-input = { version = "0.15.3", features = ["serde"] }
-config = "0.15.22"
+ratatui = { version = "0.30.2", features = ["macros"] }
+serde = { version = "1.0.229", features = ["derive"] }
+tui-input = { version = "0.15.4", features = ["serde"] }
+config = "0.15.25"

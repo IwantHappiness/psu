@@ -271,7 +271,7 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 		.max()
 		.unwrap_or(0) as u16;
 
-	let password_len: u16 = items
+	let password_len = items
 		.iter()
 		.map(Data::password)
 		.map(UnicodeWidthStr::width)
