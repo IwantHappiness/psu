@@ -20,8 +20,18 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
 					KeyCode::Esc => return Ok(()),
-					KeyCode::Char('P') => app.clip_row()?,
-					KeyCode::Char('c') => app.clip_column()?,
+					KeyCode::Char('P') => {
+						if let Err(error) = app.clip_row() {
+							app.error_message = error.to_string();
+							app.current_screen = CurrentScreen::Error;
+						}
+					}
+					KeyCode::Char('c') => {
+						if let Err(error) = app.clip_column() {
+							app.error_message = error.to_string();
+							app.current_screen = CurrentScreen::Error;
+						}
+					}
 					KeyCode::Char('p') => app.clip_password()?,
 					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
@@ -29,7 +39,10 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
 					KeyCode::Char('d' | 'D') => {
 						app.delete();
-						app.write()?;
+						if let Err(error) = app.write() {
+							app.error_message = error.to_string();
+							app.current_screen = CurrentScreen::Error;
+						}
 					}
 					KeyCode::Char('?') => app.current_screen = CurrentScreen::Help,
 					KeyCode::Char('n' | 'N') => app.current_screen = CurrentScreen::Popup,
@@ -57,7 +70,10 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						}
 
 						app.add_password();
-						app.write()?;
+						if let Err(error) = app.write() {
+							app.error_message = error.to_string();
+							app.current_screen = CurrentScreen::Error;
+						}
 						app.input.reset_data();
 						app.input_mode = InputMode::default();
 						app.current_screen = CurrentScreen::Main;
@@ -74,7 +90,7 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						};
 					}
 				},
-				CurrentScreen::Help => {
+				CurrentScreen::Help | CurrentScreen::Error => {
 					if key.code == KeyCode::Esc {
 						app.current_screen = CurrentScreen::Main;
 					}

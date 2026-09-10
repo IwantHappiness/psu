@@ -25,6 +25,7 @@ pub enum CurrentScreen {
 	#[default]
 	Main,
 	Popup,
+	Error,
 	Help,
 }
 
@@ -49,6 +50,8 @@ pub struct App {
 	pub state: TableState,
 	// Pallette for table
 	pub colors: TableColors,
+	// Save errors
+	pub error_message: String,
 	// Scroll State
 	pub scroll_state: ScrollbarState,
 	// Current input mode
@@ -68,6 +71,7 @@ impl App {
 		Self {
 			config,
 			input: UserInput::default(),
+			error_message: String::default(),
 			input_mode: InputMode::default(),
 			current_screen: CurrentScreen::default(),
 			state: TableState::default().with_selected(0),
@@ -186,7 +190,6 @@ impl App {
 		}
 	}
 
-	#[inline]
 	pub fn modify(&mut self) {
 		if let Some(index) = self.state.selected() {
 			let data = &self.items[index];

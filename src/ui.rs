@@ -77,6 +77,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 	match app.current_screen {
 		CurrentScreen::Popup => render_popup(app, frame),
 		CurrentScreen::Help => render_help(frame),
+		CurrentScreen::Error => render_error(app, frame),
 		CurrentScreen::Main => {}
 	}
 }
@@ -254,7 +255,18 @@ fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
 	frame.render_widget(info_footer, area);
 }
 
-fn render_error() {}
+fn render_error(app: &App, frame: &mut Frame) {
+	let error_block = Block::default()
+		.title("Error")
+		.borders(Borders::ALL)
+		.style(Style::default())
+		.fg(Color::Red)
+		.bg(Color::Reset);
+	let area = centered_rect(60, 37, frame.area());
+
+	frame.render_widget(Clear, area);
+	frame.render_widget(Paragraph::new(app.error_message.as_str()).block(error_block), area);
+}
 
 fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 	let service_len = items
@@ -262,21 +274,24 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 		.map(Data::service)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0) as u16;
+		.and_then(|len| u16::try_from(len).ok())
+		.unwrap_or_default();
 
 	let login_len = items
 		.iter()
 		.map(Data::login)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0) as u16;
+		.and_then(|len| u16::try_from(len).ok())
+		.unwrap_or_default();
 
 	let password_len = items
 		.iter()
 		.map(Data::password)
 		.map(UnicodeWidthStr::width)
 		.max()
-		.unwrap_or(0) as u16;
+		.and_then(|len| u16::try_from(len).ok())
+		.unwrap_or_default();
 
 	(service_len, login_len, password_len)
 }
