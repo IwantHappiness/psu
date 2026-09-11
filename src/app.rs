@@ -148,8 +148,7 @@ impl App {
 				data.service = service.into();
 			}
 		} else {
-			let new_id = self.items.len() as u32;
-			let data = Password::new(new_id, service, login, password);
+			let data = Password::new(service, login, password);
 			self.items.push(data);
 		}
 	}
@@ -162,13 +161,10 @@ impl App {
 		create_csv_file(&temp_path)?;
 		let mut wtr = get_writer(&temp_path)?;
 
-		for (index, password) in self.items.iter_mut().enumerate() {
-			if password.id != index as u32 {
-				password.id = index as u32;
-			}
-
+		for password in &self.items {
 			wtr.write_record(password.ref_array())?;
 		}
+
 		wtr.flush()?;
 
 		fs::rename(temp_path, final_path)?;
@@ -247,7 +243,7 @@ fn get_writer<T: AsRef<Path>>(path: T) -> Result<Writer<File>> {
 
 fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 	let mut wtr = get_writer(path)?;
-	wtr.write_record(["Id", "Service", "Login", "Password"])?;
+	wtr.write_record(["Service", "Login", "Password"])?;
 	wtr.flush()?;
 
 	Ok(())
@@ -307,33 +303,22 @@ impl Data for UserInput {
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "PascalCase")]
 pub struct Password {
-	pub id: u32,
 	pub service: String,
 	pub login: String,
 	pub password: String,
 }
 
 impl Password {
-	pub fn new<T: AsRef<str>>(id: u32, service: T, login: T, password: T) -> Self {
+	pub fn new<T: AsRef<str>>(service: T, login: T, password: T) -> Self {
 		Self {
-			id,
 			service: service.as_ref().into(),
 			login: login.as_ref().into(),
 			password: password.as_ref().into(),
 		}
 	}
 
-	pub fn id(&self) -> String {
-		self.id.to_string()
-	}
-
-	pub fn ref_array(&self) -> [String; 4] {
-		[
-			self.id(),
-			self.service().into(),
-			self.login().into(),
-			self.password().into(),
-		]
+	pub fn ref_array(&self) -> [String; 3] {
+		[self.service().into(), self.login().into(), self.password().into()]
 	}
 }
 
@@ -381,8 +366,8 @@ mod test_app {
 
 	#[test]
 	fn password_ref_array() {
-		let user_input = Password::new(0, "a", "b", "c");
-		assert_eq!(user_input.ref_array(), ["0", "a", "b", "c"])
+		let user_input = Password::new("a", "b", "c");
+		assert_eq!(user_input.ref_array(), ["a", "b", "c"])
 	}
 
 	#[test]

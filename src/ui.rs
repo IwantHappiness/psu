@@ -149,7 +149,6 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 		};
 		data.ref_array()
 			.into_iter()
-			.skip(1)
 			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
 			.collect::<Row>()
 			.style(Style::new().fg(app.colors.row_fg).bg(color))
@@ -297,4 +296,4 @@ fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
 }
 
 #[cfg(test)]
-mod iu_test {}
+mod ui_test {}
