@@ -20,29 +20,16 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 			match app.current_screen {
 				CurrentScreen::Main => match key.code {
 					KeyCode::Esc => return Ok(()),
-					KeyCode::Char('P') => {
-						if let Err(error) = app.clip_row() {
-							app.error_message = error.to_string();
-							app.current_screen = CurrentScreen::Error;
-						}
-					}
-					KeyCode::Char('c') => {
-						if let Err(error) = app.clip_column() {
-							app.error_message = error.to_string();
-							app.current_screen = CurrentScreen::Error;
-						}
-					}
-					KeyCode::Char('p') => app.clip_password()?,
+					KeyCode::Char('P') => app.clip_row().unwrap_or_else(|e| app.show_error(e)),
+					KeyCode::Char('c') => app.clip_column().unwrap_or_else(|e| app.show_error(e)),
+					KeyCode::Char('p') => app.clip_password().unwrap_or_else(|e| app.show_error(e)),
 					KeyCode::Char('j') | KeyCode::Down => app.next_row(),
 					KeyCode::Char('k') | KeyCode::Up => app.previous_row(),
 					KeyCode::Char('l') | KeyCode::Right => app.nex_column(),
 					KeyCode::Char('h') | KeyCode::Left => app.previous_column(),
 					KeyCode::Char('d' | 'D') => {
 						app.delete();
-						if let Err(error) = app.write() {
-							app.error_message = error.to_string();
-							app.current_screen = CurrentScreen::Error;
-						}
+						app.write().unwrap_or_else(|e| app.show_error(e));
 					}
 					KeyCode::Char('?') => app.current_screen = CurrentScreen::Help,
 					KeyCode::Char('n' | 'N') => app.current_screen = CurrentScreen::Popup,
@@ -71,10 +58,12 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 
 						app.add_password();
 						if let Err(error) = app.write() {
-							app.error_message = error.to_string();
-							app.current_screen = CurrentScreen::Error;
+							app.show_error(error);
+							app.input.reset_data();
+							app.input_mode = InputMode::default();
+							continue;
 						}
-						app.input.reset_data();
+
 						app.input_mode = InputMode::default();
 						app.current_screen = CurrentScreen::Main;
 					}
@@ -90,11 +79,24 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						};
 					}
 				},
-				CurrentScreen::Help | CurrentScreen::Error => {
-					if key.code == KeyCode::Esc {
-						app.current_screen = CurrentScreen::Main;
+				CurrentScreen::Help | CurrentScreen::Error => match key.code {
+					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
+					KeyCode::Char('j') | KeyCode::Down => {
+						if let num = app.error_scroll.saturating_add(1)
+							&& (num as usize) < app.error_message.lines().count()
+						{
+							app.error_scroll = num;
+						}
 					}
-				}
+					KeyCode::Char('k') | KeyCode::Up => {
+						if let num = app.error_scroll.saturating_sub(1)
+							&& (num as usize) < app.error_message.lines().count()
+						{
+							app.error_scroll = num;
+						}
+					}
+					_ => {}
+				},
 			}
 		}
 	}

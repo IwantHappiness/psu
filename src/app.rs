@@ -38,6 +38,16 @@ pub enum InputMode {
 }
 
 #[derive(Default)]
+pub struct PasswordTable {
+	// Table
+	pub table_state: TableState,
+	// Scroll state table
+	pub scroll_state: ScrollbarState,
+	// Pallette for table
+	pub colors: TableColors,
+}
+
+#[derive(Default)]
 pub struct App {
 	pub config: Config,
 	// User form
@@ -46,14 +56,14 @@ pub struct App {
 	pub items: Vec<Password>,
 	// Current field
 	pub input_mode: InputMode,
-	// Table
-	pub state: TableState,
-	// Pallette for table
-	pub colors: TableColors,
 	// Save errors
 	pub error_message: String,
-	// Scroll State
-	pub scroll_state: ScrollbarState,
+	// Scroll
+	pub error_scroll: u16,
+	// Scroll state errors
+	pub error_scrollbar: ScrollbarState,
+	// Table app
+	pub table: PasswordTable,
 	// Current input mode
 	pub current_screen: CurrentScreen,
 	// Need for handle mode input password
@@ -70,20 +80,25 @@ impl App {
 
 		Self {
 			config,
-			input: UserInput::default(),
-			error_message: String::default(),
-			input_mode: InputMode::default(),
-			current_screen: CurrentScreen::default(),
-			state: TableState::default().with_selected(0),
-			colors: TableColors::new(&tailwind::GRAY),
-			scroll_state: ScrollbarState::new(items.len().saturating_sub(ITEM_HEIGHT)),
-			is_modify: false,
+			table: PasswordTable {
+				table_state: TableState::default().with_selected(0),
+				scroll_state: ScrollbarState::new(items.len().saturating_sub(ITEM_HEIGHT)),
+				colors: TableColors::new(&tailwind::GRAY),
+			},
 			items,
+			..Default::default()
 		}
 	}
 
+	pub fn show_error(&mut self, error: impl Display) {
+		self.error_message = error.to_string();
+		self.error_scroll = 0;
+		self.error_scrollbar = ScrollbarState::new(self.error_message.lines().count().max(1)).position(0);
+		self.current_screen = CurrentScreen::Error;
+	}
+
 	pub fn next_row(&mut self) {
-		let i = match self.state.selected() {
+		let i = match self.table.table_state.selected() {
 			Some(i) => {
 				if i >= self.items.len() - 1 {
 					0
@@ -93,12 +108,12 @@ impl App {
 			}
 			None => 0,
 		};
-		self.state.select(Some(i));
-		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
+		self.table.table_state.select(Some(i));
+		self.table.scroll_state = self.table.scroll_state.position(i * ITEM_HEIGHT);
 	}
 
 	pub fn previous_row(&mut self) {
-		let i = match self.state.selected() {
+		let i = match self.table.table_state.selected() {
 			Some(i) => {
 				if i == 0 {
 					self.items.len() - 1
@@ -108,8 +123,8 @@ impl App {
 			}
 			None => 0,
 		};
-		self.state.select(Some(i));
-		self.scroll_state = self.scroll_state.position(i * ITEM_HEIGHT);
+		self.table.table_state.select(Some(i));
+		self.table.scroll_state = self.table.scroll_state.position(i * ITEM_HEIGHT);
 	}
 
 	pub fn next_input_mode(&mut self) {
@@ -129,18 +144,18 @@ impl App {
 	}
 
 	pub fn nex_column(&mut self) {
-		self.state.select_next_column();
+		self.table.table_state.select_next_column();
 	}
 
 	pub fn previous_column(&mut self) {
-		self.state.select_previous_column();
+		self.table.table_state.select_previous_column();
 	}
 
 	pub fn add_password(&mut self) {
 		let (service, login, password) = self.input.ref_array().into();
 
 		if self.is_modify {
-			if let Some(index) = self.state.selected() {
+			if let Some(index) = self.table.table_state.selected() {
 				let data = &mut self.items[index];
 
 				data.login = login.into();
@@ -181,13 +196,13 @@ impl App {
 	}
 
 	pub fn delete(&mut self) {
-		if let Some(index) = self.state.selected() {
+		if let Some(index) = self.table.table_state.selected() {
 			self.items.remove(index);
 		}
 	}
 
 	pub fn modify(&mut self) {
-		if let Some(index) = self.state.selected() {
+		if let Some(index) = self.table.table_state.selected() {
 			let data = &self.items[index];
 			self.input = data.into();
 		}
@@ -195,7 +210,7 @@ impl App {
 	}
 
 	pub fn clip_row(&self) -> anyhow::Result<(), Box<dyn Error>> {
-		if let Some(index) = self.state.selected() {
+		if let Some(index) = self.table.table_state.selected() {
 			let mut ctx = ClipboardContext::new()?;
 			let password = self.items.get(index).context("No get Password.")?;
 
@@ -206,7 +221,7 @@ impl App {
 	}
 
 	pub fn clip_password(&self) -> anyhow::Result<(), Box<dyn Error>> {
-		if let Some(index) = self.state.selected() {
+		if let Some(index) = self.table.table_state.selected() {
 			let mut ctx = ClipboardContext::new()?;
 			let password = self.items.get(index).context("No get Password.")?;
 
@@ -217,11 +232,11 @@ impl App {
 	}
 
 	pub fn clip_column(&self) -> anyhow::Result<(), Box<dyn Error>> {
-		if let Some(index) = self.state.selected() {
+		if let Some(index) = self.table.table_state.selected() {
 			let mut ctx = ClipboardContext::new()?;
 			let password = self.items.get(index).context("No get Password.")?;
 
-			let data = match self.state.selected_column() {
+			let data = match self.table.table_state.selected_column() {
 				Some(1) => password.login(),
 				Some(0) => password.service(),
 				_ => password.password(),
@@ -251,9 +266,7 @@ fn create_csv_file<T: AsRef<Path>>(path: T) -> Result<()> {
 
 pub trait Data {
 	fn login(&self) -> &str;
-
 	fn password(&self) -> &str;
-
 	fn service(&self) -> &str;
 }
 

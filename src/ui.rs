@@ -6,7 +6,7 @@ use ratatui::{
 	text::Text,
 	widgets::{
 		Block, BorderType, Borders, Cell, Clear, HighlightSpacing, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-		Table,
+		ScrollbarState, Table, Wrap,
 	},
 };
 use unicode_width::UnicodeWidthStr;
@@ -26,7 +26,7 @@ const HELP_TEXT: [&str; 15] = [
 	"(c) - copy column",
 	"(p) - copy password",
 	"(P) - copy row",
-	" ",
+	"\n",
 	"--- Navigation ---",
 	"(↑, k) - move up ",
 	"(↓, j) - move down",
@@ -71,7 +71,15 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 
 	render_header(app, frame, rects[0]);
 	render_table(app, frame, rects[1]);
-	render_scrollbar(app, frame, rects[1]);
+	render_scrollbar(
+		frame,
+		rects[1].inner(Margin {
+			vertical: 1,
+			horizontal: 1,
+		}),
+		&mut app.table.scroll_state,
+	);
+
 	render_footer(app, frame, rects[2]);
 
 	match app.current_screen {
@@ -116,8 +124,8 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
 fn render_header(app: &App, frame: &mut Frame, area: Rect) {
 	let block = Block::default()
 		.borders(Borders::TOP | Borders::BOTTOM)
-		.bg(app.colors.header_bg);
-	let header_style = Style::default().fg(app.colors.header_fg);
+		.bg(app.table.colors.header_bg);
+	let header_style = Style::default().fg(app.table.colors.header_fg);
 	let chunks = Layout::default()
 		.direction(Direction::Horizontal)
 		.constraints([
@@ -136,22 +144,22 @@ fn render_header(app: &App, frame: &mut Frame, area: Rect) {
 fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	let selected_row_style = Style::default()
 		.add_modifier(Modifier::REVERSED)
-		.fg(app.colors.selected_row_style_fg);
-	let selected_col_style = Style::default().fg(app.colors.selected_column_style_fg);
+		.fg(app.table.colors.selected_row_style_fg);
+	let selected_col_style = Style::default().fg(app.table.colors.selected_column_style_fg);
 	let selected_cell_style = Style::default()
 		.add_modifier(Modifier::REVERSED)
-		.fg(app.colors.selected_cell_style_fg);
+		.fg(app.table.colors.selected_cell_style_fg);
 
 	let rows = app.items.iter().enumerate().map(|(i, data)| {
 		let color = match i % 2 {
-			0 => app.colors.normal_row_color,
-			_ => app.colors.alt_row_color,
+			0 => app.table.colors.normal_row_color,
+			_ => app.table.colors.alt_row_color,
 		};
 		data.ref_array()
 			.into_iter()
 			.map(|content| Cell::from(Text::from(format!("\n{content}\n"))))
 			.collect::<Row>()
-			.style(Style::new().fg(app.colors.row_fg).bg(color))
+			.style(Style::new().fg(app.table.colors.row_fg).bg(color))
 			.height(ITEM_HEIGHT as u16)
 	});
 
@@ -168,23 +176,20 @@ fn render_table(app: &mut App, frame: &mut Frame, area: Rect) {
 	.column_highlight_style(selected_col_style)
 	.cell_highlight_style(selected_cell_style)
 	.highlight_symbol(Text::from(vec!["".into(), BAR_SYMBOL.into(), "".into()]))
-	.bg(app.colors.buffer_bg)
+	.bg(app.table.colors.buffer_bg)
 	.highlight_spacing(HighlightSpacing::Always);
 
-	frame.render_stateful_widget(table, area, &mut app.state);
+	frame.render_stateful_widget(table, area, &mut app.table.table_state);
 }
 
-fn render_scrollbar(app: &mut App, frame: &mut Frame, area: Rect) {
+fn render_scrollbar(frame: &mut Frame, inner: Rect, scroll_state: &mut ScrollbarState) {
 	frame.render_stateful_widget(
 		Scrollbar::default()
 			.orientation(ScrollbarOrientation::VerticalRight)
 			.begin_symbol(Some(SCROLLBAR_BEGIN_SYMBOL))
 			.end_symbol(Some(SCROLLBAR_END_SYMBOL)),
-		area.inner(Margin {
-			vertical: 1,
-			horizontal: 1,
-		}),
-		&mut app.scroll_state,
+		inner,
+		scroll_state,
 	);
 }
 
@@ -244,17 +249,17 @@ pub fn render_popup(app: &App, frame: &mut Frame) {
 
 fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
 	let info_footer = Paragraph::new(Text::from_iter(INFO_TEXT))
-		.style(Style::new().fg(app.colors.row_fg).bg(app.colors.buffer_bg))
+		.style(Style::new().fg(app.table.colors.row_fg).bg(app.table.colors.buffer_bg))
 		.centered()
 		.block(
 			Block::bordered()
 				.border_type(BorderType::Double)
-				.border_style(Style::new().fg(app.colors.footer_border_color)),
+				.border_style(Style::new().fg(app.table.colors.footer_border_color)),
 		);
 	frame.render_widget(info_footer, area);
 }
 
-fn render_error(app: &App, frame: &mut Frame) {
+fn render_error(app: &mut App, frame: &mut Frame) {
 	let error_block = Block::default()
 		.title("Error")
 		.borders(Borders::ALL)
@@ -264,7 +269,24 @@ fn render_error(app: &App, frame: &mut Frame) {
 	let area = centered_rect(60, 37, frame.area());
 
 	frame.render_widget(Clear, area);
-	frame.render_widget(Paragraph::new(app.error_message.as_str()).block(error_block), area);
+	frame.render_widget(
+		Paragraph::new(app.error_message.as_str())
+			.block(error_block)
+			.wrap(Wrap { trim: false })
+			.scroll((app.error_scroll, 0)),
+		area,
+	);
+
+	let scrollbar_area = area.inner(Margin {
+		vertical: 1,
+		horizontal: 0,
+	});
+	app.error_scrollbar = app
+		.error_scrollbar
+		.position(usize::from(app.error_scroll))
+		.viewport_content_length(usize::from(scrollbar_area.height));
+
+	render_scrollbar(frame, scrollbar_area, &mut app.error_scrollbar);
 }
 
 fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
