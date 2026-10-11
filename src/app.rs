@@ -24,9 +24,16 @@ pub const ITEM_HEIGHT: usize = 3;
 pub enum CurrentScreen {
 	#[default]
 	Main,
-	Popup,
+	Popup(Kind),
 	Error,
 	Help,
+}
+
+#[derive(Debug, Default, PartialEq)]
+pub enum Kind {
+	#[default]
+	Add,
+	Edit,
 }
 
 #[derive(Debug, Default, PartialEq)]
@@ -66,16 +73,10 @@ pub struct App {
 	pub table: PasswordTable,
 	// Current input mode
 	pub current_screen: CurrentScreen,
-	// Need for handle mode input password
-	pub is_modify: bool,
 }
 
 impl App {
-	pub fn new() -> Self {
-		let config = Config::new().unwrap_or_else(|_| {
-			Config::gen_config().unwrap();
-			Config::new().unwrap_or_default()
-		});
+	pub fn new(config: Config) -> Self {
 		let items = App::read(config.path.join(PASSWORD_FILE)).unwrap_or_default();
 
 		Self {
@@ -153,18 +154,20 @@ impl App {
 
 	pub fn add_password(&mut self) {
 		let (service, login, password) = self.input.ref_array().into();
+		let data = Password::new(service, login, password);
 
-		if self.is_modify {
-			if let Some(index) = self.table.table_state.selected() {
-				let data = &mut self.items[index];
+		self.items.push(data);
+	}
 
-				data.login = login.into();
-				data.password = password.into();
-				data.service = service.into();
-			}
-		} else {
-			let data = Password::new(service, login, password);
-			self.items.push(data);
+	pub fn edit_password(&mut self) {
+		let (service, login, password) = self.input.ref_array().into();
+
+		if let Some(index) = self.table.table_state.selected() {
+			let data = &mut self.items[index];
+
+			data.login = login.into();
+			data.password = password.into();
+			data.service = service.into();
 		}
 	}
 
@@ -206,7 +209,6 @@ impl App {
 			let data = &self.items[index];
 			self.input = data.into();
 		}
-		self.is_modify = true;
 	}
 
 	pub fn clip_row(&self) -> anyhow::Result<(), Box<dyn Error>> {

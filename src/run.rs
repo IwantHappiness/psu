@@ -1,5 +1,5 @@
 use super::{
-	app::{App, CurrentScreen, Data, InputMode},
+	app::{App, CurrentScreen, Data, InputMode, Kind},
 	ui::ui,
 };
 use crossterm::event::{self, Event, KeyCode};
@@ -32,18 +32,17 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						app.write().unwrap_or_else(|e| app.show_error(e));
 					}
 					KeyCode::Char('?') => app.current_screen = CurrentScreen::Help,
-					KeyCode::Char('n' | 'N') => app.current_screen = CurrentScreen::Popup,
+					KeyCode::Char('n' | 'N') => app.current_screen = CurrentScreen::Popup(Kind::Add),
 					KeyCode::Char('m' | 'M') => {
 						app.modify();
-						app.current_screen = CurrentScreen::Popup;
+						app.current_screen = CurrentScreen::Popup(Kind::Edit);
 					}
 					_ => {}
 				},
-				CurrentScreen::Popup => match key.code {
+				CurrentScreen::Popup(ref kind) => match key.code {
 					KeyCode::Esc => {
-						if app.is_modify {
+						if kind == &Kind::Edit {
 							app.input.reset_data();
-							app.is_modify = false;
 						}
 						app.current_screen = CurrentScreen::Main;
 					}
@@ -56,7 +55,13 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 							continue;
 						}
 
-						app.add_password();
+						if kind == &Kind::Edit {
+							app.edit_password();
+						} else {
+							app.add_password();
+						}
+
+						app.input.reset_data();
 						if let Err(error) = app.write() {
 							app.show_error(error);
 							app.input.reset_data();
@@ -79,6 +84,7 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						};
 					}
 				},
+
 				CurrentScreen::Help | CurrentScreen::Error => match key.code {
 					KeyCode::Esc => app.current_screen = CurrentScreen::Main,
 					KeyCode::Char('j') | KeyCode::Down => {

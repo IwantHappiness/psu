@@ -83,7 +83,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 	render_footer(app, frame, rects[2]);
 
 	match app.current_screen {
-		CurrentScreen::Popup => render_popup(app, frame),
+		CurrentScreen::Popup(..) => render_popup(app, frame),
 		CurrentScreen::Help => render_help(frame),
 		CurrentScreen::Error => render_error(app, frame),
 		CurrentScreen::Main => {}

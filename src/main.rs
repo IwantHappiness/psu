@@ -46,14 +46,10 @@ fn install_panic_hook() {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-	let config = match Config::load() {
-		Ok(c) => c,
-		Err(e) => {
-			eprintln!("{}", format!("ERROR: {e}").red());
-			Config::new().unwrap_or_default()
-		}
-	};
-
+	let config = Config::load().unwrap_or_else(|e| {
+		eprintln!("{}", format!("ERROR: {e}").red());
+		Config::default()
+	});
 	let mut app = App::new(config);
 	let mut stderr = io::stderr();
 
