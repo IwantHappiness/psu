@@ -20,17 +20,8 @@ pub struct Fields {
 }
 
 impl Config {
-	pub fn new() -> Result<Self, ConfigError> {
-		let Some(dir) = Self::get_app_data_dir() else {
-			return Ok(Config::default());
-		};
-
-		let mut builder = ConfigBuilder::builder();
-		builder = builder.add_source(File::from(dir.join(CONFIG_FILE)).format(FileFormat::Toml));
-		builder.build()?.try_deserialize().map(|mut config: Config| {
-			config.replace_tilde();
-			config
-		})
+	pub fn new(path: PathBuf, fields: Fields) -> Self {
+		Self { path, fields }
 	}
 
 	pub fn gen_config() -> Result<()> {
@@ -46,6 +37,19 @@ impl Config {
 		Ok(())
 	}
 
+	pub fn load() -> anyhow::Result<Self> {
+		let Some(dir) = Self::get_app_data_dir() else {
+			return Ok(Self::default());
+		};
+
+		let path = dir.join(CONFIG_FILE);
+		if !path.exists() {
+			Self::gen_config()?;
+		}
+
+		Ok(Self::build(path)?)
+	}
+
 	fn replace_tilde(&mut self) {
 		if let Some(home) = dirs::home_dir() {
 			self.path = self.path.to_string_lossy().replace('~', &home.to_string_lossy()).into();
@@ -54,6 +58,16 @@ impl Config {
 
 	fn get_app_data_dir() -> Option<PathBuf> {
 		Some(dirs::config_dir()?.join(APP_NAME))
+	}
+
+	fn build(path: PathBuf) -> Result<Self, ConfigError> {
+		let mut build: Self = ConfigBuilder::builder()
+			.add_source(File::from(path).format(FileFormat::Toml))
+			.build()?
+			.try_deserialize()?;
+
+		build.replace_tilde();
+		Ok(build)
 	}
 }
 
