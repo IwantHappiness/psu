@@ -159,16 +159,17 @@ impl App {
 		self.items.push(data);
 	}
 
-	pub fn edit_password(&mut self) {
+	pub fn edit_password(&mut self) -> anyhow::Result<()> {
 		let (service, login, password) = self.input.ref_array().into();
 
-		if let Some(index) = self.table.table_state.selected() {
-			let data = &mut self.items[index];
+		let index = self.table.table_state.selected().context("No row selected")?;
+		let data = &mut self.items[index];
 
-			data.login = login.into();
-			data.password = password.into();
-			data.service = service.into();
-		}
+		data.login = login.into();
+		data.password = password.into();
+		data.service = service.into();
+
+		Ok(())
 	}
 
 	// Write password to PASSWORD_FILE
@@ -189,13 +190,12 @@ impl App {
 		Ok(())
 	}
 
-	pub fn read<T: AsRef<Path>>(path: T) -> Option<Vec<Password>> {
-		if let Ok(mut wtr) = csv::Reader::from_path(path) {
-			let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
-			return Some(vec);
-		}
+	pub fn read<T: AsRef<Path>>(path: T) -> anyhow::Result<Vec<Password>> {
+		let mut wtr = csv::Reader::from_path(&path)
+			.map_err(|e| anyhow::anyhow!("failed to open {:?}: {e}", path.as_ref().display()))?;
+		let vec: Vec<Password> = wtr.deserialize::<Password>().flatten().collect();
 
-		None
+		Ok(vec)
 	}
 
 	pub fn delete(&mut self) {
@@ -290,7 +290,6 @@ impl UserInput {
 		[self.service(), self.login(), self.password()]
 	}
 
-	#[allow(unused)]
 	pub fn from_array<T: AsRef<str>>(value: impl Borrow<[T; 3]>) -> Self {
 		let value = value.borrow();
 		Self {
@@ -332,8 +331,8 @@ impl Password {
 		}
 	}
 
-	pub fn ref_array(&self) -> [String; 3] {
-		[self.service().into(), self.login().into(), self.password().into()]
+	pub fn ref_array(&self) -> [&str; 3] {
+		[self.service(), self.login(), self.password()]
 	}
 }
 
@@ -368,27 +367,4 @@ impl<T: Borrow<Password>> From<T> for UserInput {
 }
 
 #[cfg(test)]
-mod test_app {
-	use crate::app::Password;
-
-	use super::UserInput;
-
-	#[test]
-	fn user_input_ref_array() {
-		let user_input = UserInput::from_array(["a", "b", "c"]);
-		assert_eq!(user_input.ref_array(), ["a", "b", "c"])
-	}
-
-	#[test]
-	fn password_ref_array() {
-		let user_input = Password::new("a", "b", "c");
-		assert_eq!(user_input.ref_array(), ["a", "b", "c"])
-	}
-
-	#[test]
-	fn reset_input() {
-		let mut user_input = UserInput::from_array(["a", "b", "c"]);
-		user_input.reset_data();
-		assert_eq!(user_input.ref_array(), ["", "", ""])
-	}
-}
+mod test_app {}

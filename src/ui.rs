@@ -290,31 +290,21 @@ fn render_error(app: &mut App, frame: &mut Frame) {
 }
 
 fn constraint_len_calculator<T: Data>(items: &[T]) -> (u16, u16, u16) {
-	let service_len = items
-		.iter()
-		.map(Data::service)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.and_then(|len| u16::try_from(len).ok())
-		.unwrap_or_default();
+	let mut service_len = 0usize;
+	let mut login_len = 0usize;
+	let mut password_len = 0usize;
 
-	let login_len = items
-		.iter()
-		.map(Data::login)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.and_then(|len| u16::try_from(len).ok())
-		.unwrap_or_default();
+	for item in items {
+		service_len = service_len.max(UnicodeWidthStr::width(item.service()));
+		login_len = login_len.max(UnicodeWidthStr::width(item.login()));
+		password_len = password_len.max(UnicodeWidthStr::width(item.password()));
+	}
 
-	let password_len = items
-		.iter()
-		.map(Data::password)
-		.map(UnicodeWidthStr::width)
-		.max()
-		.and_then(|len| u16::try_from(len).ok())
-		.unwrap_or_default();
-
-	(service_len, login_len, password_len)
+	(
+		u16::try_from(service_len).unwrap_or_default(),
+		u16::try_from(login_len).unwrap_or_default(),
+		u16::try_from(password_len).unwrap_or_default(),
+	)
 }
 
 #[cfg(test)]

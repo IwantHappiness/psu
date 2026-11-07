@@ -56,7 +56,10 @@ pub fn run_app<B: Backend + 'static>(terminal: &mut Terminal<B>, app: &mut App) 
 						}
 
 						if kind == &Kind::Edit {
-							app.edit_password();
+							if let Err(error) = app.edit_password() {
+								app.show_error(error);
+								continue;
+							}
 						} else {
 							app.add_password();
 						}
